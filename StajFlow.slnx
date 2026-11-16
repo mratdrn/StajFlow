@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/backend/">
+    <Project Path="backend/StajFlow.Api.csproj" />
+  </Folder>
+</Solution>
