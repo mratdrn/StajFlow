@@ -18,9 +18,16 @@ public class CompanyApplicationsController(ICompanyApplicationService service, I
     private string IdentityUserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CompanyApplicationDto>>> List(
+    public async Task<IActionResult> List(
         [FromQuery(Name = "internshipPostingId"), Range(1, int.MaxValue, ErrorMessage = "Geçerli bir ilan seçin.")] int? postingId,
-        CancellationToken cancellationToken) => Ok(await service.ListAsync(IdentityUserId, postingId, cancellationToken));
+        [FromQuery, Range(1, int.MaxValue, ErrorMessage = "Sayfa numarası en az 1 olmalıdır.")] int? page,
+        [FromQuery, AllowedValues(null, "Submitted", "UnderReview", "Accepted", "Rejected", ErrorMessage = "Başvuru durumu geçersiz.")] string? status,
+        CancellationToken cancellationToken)
+    {
+        if (page.HasValue || status is not null)
+            return Ok(await service.ListPageAsync(IdentityUserId, postingId, page ?? 1, status, cancellationToken));
+        return Ok(await service.ListAsync(IdentityUserId, postingId, cancellationToken));
+    }
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<CompanyApplicationDto>> Get(int id, CancellationToken cancellationToken)

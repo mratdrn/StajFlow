@@ -11,7 +11,7 @@ export function formatDate(value, fallbackText = 'Belirtilmemiş') {
 }
 
 export function locationLabel(posting) {
-  return posting.location || (posting.isRemote ? 'Uzaktan' : 'Konum belirtilmemiş');
+  return posting.location || (posting.workArrangement === 'Remote' ? 'Uzaktan' : 'Konum belirtilmemiş');
 }
 
 export function companyInitials(name) {
@@ -27,8 +27,13 @@ export function postingStatusLabel(status) {
   return { Draft: 'Taslak', Published: 'Yayında', Closed: 'Kapalı' }[status] || 'Bilinmeyen durum';
 }
 
-export function applicationStatusLabel(status) {
+export function applicationStatusLabel(status, role = 'Student') {
+  if (status === 'Submitted' && role === 'Company') return 'Bekliyor';
   return { Submitted: 'Gönderildi', UnderReview: 'İnceleniyor', Shortlisted: 'Kısa listeye alındı',
     Accepted: 'Kabul edildi', Rejected: 'Reddedildi', Withdrawn: 'Geri çekildi' }[status] || 'Bilinmeyen durum';
 }
 
+
+export function workArrangementLabel(value) {
+  return { OnSite: 'İş yerinde', Hybrid: 'Hibrit', Remote: 'Uzaktan' }[value] || 'Belirtilmemiş';
+}

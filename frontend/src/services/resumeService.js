@@ -15,3 +15,7 @@ export function uploadResume(file, signal) {
 export function getResumeFile(id, signal) {
   return apiRequest(`${resumePath}/${encodeURIComponent(id)}/file`, { signal, fileResponse: true });
 }
+
+export function deleteResume(id, signal) {
+  return apiRequest(`${resumePath}/${encodeURIComponent(id)}`, { method: 'DELETE', signal });
+}

@@ -20,6 +20,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IInternshipPostingService, InternshipPostingService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IStudentAccountService, StudentAccountService>();
+builder.Services.AddScoped<ICompanyLogoService, CompanyLogoService>();
 builder.Services.AddScoped<ICompanyPostingService, CompanyPostingService>();
 builder.Services.AddScoped<IResumeService, ResumeService>();
 builder.Services.AddScoped<IStudentApplicationService, StudentApplicationService>();
@@ -36,8 +38,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.Password.RequiredLength = 10;
     options.Password.RequireDigit = true;
     options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
 })
@@ -111,7 +113,7 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddCors(options =>
         options.AddPolicy(frontendDevelopmentPolicy, policy =>
             policy.WithOrigins("https://localhost:5173")
-                .WithMethods("GET", "POST", "PUT")
+                .WithMethods("GET", "POST", "PUT", "DELETE")
                 .WithHeaders("Accept", "Content-Type", "X-CSRF-TOKEN")
                 .AllowCredentials()));
 }

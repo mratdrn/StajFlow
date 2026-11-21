@@ -16,13 +16,38 @@ public class CompanyApplicationService(ApplicationDbContext context) : ICompanyA
         application.CoverLetter, application.Status.ToString(), application.AppliedAt, application.StatusUpdatedAt,
         Convert.ToBase64String(application.RowVersion));
 
-    public async Task<IReadOnlyList<CompanyApplicationDto>> ListAsync(string userId, int? postingId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<CompanyApplicationDto>> ListAsync(string userId, int? postingId, CancellationToken cancellationToken) =>
+        await BuildListQuery(userId, postingId).ToListAsync(cancellationToken);
+
+    public async Task<CompanyApplicationPageDto> ListPageAsync(
+        string userId, int? postingId, int page, string? status, CancellationToken cancellationToken)
+    {
+        var counts = await BuildApplicationQuery(userId, postingId).GroupBy(application => application.Status)
+            .Select(group => new { Status = group.Key, Count = group.Count() }).ToListAsync(cancellationToken);
+        var statusCounts = counts.ToDictionary(group => group.Status.ToString(), group => group.Count);
+        statusCounts["All"] = counts.Sum(group => group.Count);
+        var result = await BuildListQuery(userId, postingId, status).ToPageAsync(page, 50, cancellationToken);
+        return new(result.Items, result.Page, result.PageSize, result.TotalCount, statusCounts);
+    }
+
+    private IQueryable<InternshipApplication> BuildApplicationQuery(string userId, int? postingId)
     {
         var query = context.Applications.AsNoTracking()
             .Where(application => application.InternshipPosting.CompanyProfile.IdentityUserId == userId);
         if (postingId.HasValue) query = query.Where(application => application.InternshipPostingId == postingId.Value);
-        return await query.OrderByDescending(application => application.AppliedAt).ThenByDescending(application => application.Id)
-            .Select(DtoProjection).ToListAsync(cancellationToken);
+        return query;
+    }
+
+    private IQueryable<CompanyApplicationDto> BuildListQuery(string userId, int? postingId, string? status = null)
+    {
+        var query = BuildApplicationQuery(userId, postingId);
+        if (status is not null)
+        {
+            var selectedStatus = Enum.Parse<ApplicationStatus>(status);
+            query = query.Where(application => application.Status == selectedStatus);
+        }
+        return query.OrderByDescending(application => application.AppliedAt).ThenByDescending(application => application.Id)
+            .Select(DtoProjection);
     }
 
     public Task<CompanyApplicationDto?> GetAsync(string userId, int id, CancellationToken cancellationToken) =>

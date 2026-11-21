@@ -49,15 +49,16 @@ export default function CompanyApplicationDetailPage() {
     } finally { if (!abort.signal.aborted) setIsSaving(false); }
   }
 
-  return <div className="profile-page">
+  return <div className="profile-page company-application-detail">
     <Link className="back-link" to="/sirket/basvurular">← Gelen başvurulara dön</Link>
-    <h1 className="page-title">Başvuruyu incele</h1>
+    <div className="posting-management-heading"><div><p className="eyebrow">ŞİRKET HESABI</p><h1 className="page-title">Başvuruyu incele</h1>
+      <p className="muted">Aday bilgilerini ve özgeçmişini inceleyerek başvuruyu değerlendirin.</p></div></div>
     {error ? error.status === 404 ? <StatePanel title="Başvuru bulunamadı">Bu başvuru mevcut değil veya şirketinize ait bir ilana yapılmamış.</StatePanel> :
       <StatePanel title="Başvuru yüklenemedi" isError onRetry={() => setAttempt((value) => value + 1)}>{error.message}</StatePanel> : !application ? <LoadingState /> : <>
         <article className="profile-card">
-          <span className="badge">{applicationStatusLabel(application.status)}</span>
+          <span className={`badge${application.status === 'Accepted' ? ' badge-accepted' : ''}`}>{applicationStatusLabel(application.status, 'Company')}</span>
           <h2>{application.studentFullName}</h2><p className="muted">{application.title}</p>
-          <dl>
+          <dl className="company-application-details">
             <div><dt>E-posta</dt><dd>{application.studentEmail}</dd></div>
             <div><dt>Üniversite ve bölüm</dt><dd>{[application.university, application.department].filter(Boolean).join(' · ') || 'Belirtilmemiş'}</dd></div>
             <div><dt>Başvuru zamanı</dt><dd>{new Date(application.appliedAt).toLocaleString('tr-TR')}</dd></div>
@@ -72,7 +73,7 @@ export default function CompanyApplicationDetailPage() {
               <div className="form-field"><label htmlFor="application-status">Yeni başvuru durumu</label>
                 <select id="application-status" value={newStatus} onChange={(event) => { setNewStatus(event.target.value); event.target.setCustomValidity(''); }} required disabled={isSaving || hasConflict}
                   onInvalid={(event) => event.currentTarget.setCustomValidity('Yeni başvuru durumunu seçin.')}>
-                  <option value="" disabled>Durum seçin</option>{statuses.map((status) => <option key={status} value={status}>{applicationStatusLabel(status)}</option>)}
+                  <option value="" disabled>Durum seçin</option>{statuses.map((status) => <option key={status} value={status}>{applicationStatusLabel(status, 'Company')}</option>)}
                 </select></div>
               {registrationError && <p className="form-alert" role="alert">{registrationError}</p>}
               {success && <p className="success-notice" role="status">{success}</p>}

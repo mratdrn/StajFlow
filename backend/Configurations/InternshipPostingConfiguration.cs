@@ -11,6 +11,7 @@ public class InternshipPostingConfiguration : IEntityTypeConfiguration<Internshi
         builder.ToTable("InternshipPostings", table =>
         {
             table.HasCheckConstraint("CK_InternshipPostings_Status", "[Status] IN ('Draft','Published','Closed')");
+            table.HasCheckConstraint("CK_InternshipPostings_WorkArrangement", "[WorkArrangement] IN ('OnSite','Hybrid','Remote')");
             table.HasCheckConstraint("CK_InternshipPostings_Dates", "[EndDate] IS NULL OR [StartDate] IS NULL OR [EndDate] >= [StartDate]");
         });
         builder.HasKey(record => record.Id);
@@ -19,6 +20,7 @@ public class InternshipPostingConfiguration : IEntityTypeConfiguration<Internshi
         builder.Property(record => record.Description).HasMaxLength(10000).IsRequired();
         builder.Property(record => record.Location).HasMaxLength(250);
         builder.Property(record => record.Status).HasColumnName("Status").HasConversion<string>().HasMaxLength(20);
+        builder.Property(record => record.WorkArrangement).HasConversion<string>().HasMaxLength(20);
         builder.Property(record => record.CreatedAt).HasDefaultValueSql("SYSDATETIMEOFFSET()");
         builder.Property(record => record.RowVersion).IsRowVersion();
         builder.HasIndex(record => new { record.Status, record.ApplicationDeadline });

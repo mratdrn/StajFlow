@@ -54,7 +54,7 @@ export default function RegistrationPage({ role }) {
           {isCompany ? <FormField name="companyName" label="Şirket adı" autoComplete="organization" maxLength={200} required value={fields.companyName} onChange={handleChange} errors={errors} /> :
             <FormField name="fullName" label="Ad soyad" autoComplete="name" maxLength={201} required value={fields.fullName} onChange={handleChange} errors={errors} />}
           <FormField name="email" label="E-posta" type="email" autoComplete="email" maxLength={254} required value={fields.email} onChange={handleChange} errors={errors} />
-          <FormField name="password" label="Parola" type="password" autoComplete="new-password" minLength={10} maxLength={128} required value={fields.password} onChange={handleChange} errors={errors} hint="Büyük harf, küçük harf, rakam ve simge içeren 10–128 karakter kullanın." />
+          <FormField name="password" label="Parola" type="password" autoComplete="new-password" minLength={10} maxLength={128} required value={fields.password} onChange={handleChange} errors={errors} hint="En az bir küçük harf ve bir rakam içeren 10–128 karakter kullanın." />
           <FormField name="confirmPassword" label="Parola tekrarı" type="password" autoComplete="new-password" maxLength={128} required value={fields.confirmPassword} onChange={handleChange} errors={errors} />
           {message && <p className="form-alert" role="alert">{message}</p>}
           <button className="button auth-submit" type="submit">{isProcessing ? 'Hesap oluşturuluyor…' : 'Hesap oluştur'}</button>

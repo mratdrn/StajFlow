@@ -2,17 +2,23 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { getInternshipPostings } from "../services/internshipPostingService.js";
 import InternshipPostingCard from "../components/InternshipPostingCard.jsx";
+import Pagination from "../components/Pagination.jsx";
 import LoadingState from "../components/LoadingState.jsx";
 import StatePanel from "../components/StatePanel.jsx";
 import internshipJourneyImage from "../../logo/photo.png";
 
 export default function InternshipPostingsPage() {
   const [postings, setPostings] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 0, totalCount: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [attempt, setAttempt] = useState(0);
   const [parameters, setParameters] = useSearchParams();
-  const filters = parameters.toString();
+  const requestedPage = Number(parameters.get('page') || 1);
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const filterParameters = new URLSearchParams(parameters);
+  filterParameters.delete('page');
+  const filters = filterParameters.toString();
 
   useEffect(() => {
     document.title = 'Staj ilanları | StajFlow';
@@ -20,9 +26,18 @@ export default function InternshipPostingsPage() {
     setIsLoading(true);
     setError(null);
 
-    getInternshipPostings(abortController.signal, filters)
+    const query = new URLSearchParams(filters);
+    query.set('page', page);
+    getInternshipPostings(abortController.signal, query.toString())
       .then((data) => {
-        if (!abortController.signal.aborted) setPostings(data);
+        if (!abortController.signal.aborted) {
+          setPostings(data.items);
+          setPagination(data);
+          if (data.page !== page) {
+            query.set('page', data.page);
+            setParameters(query, { replace: true });
+          }
+        }
       })
       .catch((failure) => {
         if (!abortController.signal.aborted) setError(failure.message);
@@ -32,17 +47,24 @@ export default function InternshipPostingsPage() {
       });
 
     return () => abortController.abort();
-  }, [attempt, filters]);
+  }, [attempt, filters, page, setParameters]);
 
   function searchPostings(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const newItem = new URLSearchParams();
-    for (const field of ['q', 'location', 'isRemote']) {
+    for (const field of ['q', 'location', 'workArrangement']) {
       const value = form.get(field)?.trim();
       if (value) newItem.set(field, value);
     }
     setParameters(newItem);
+  }
+
+  function changePage(nextPage) {
+    const next = new URLSearchParams(parameters);
+    next.set('page', nextPage);
+    setParameters(next);
+    document.getElementById('opportunities-heading')?.scrollIntoView({ block: 'start' });
   }
 
   return (
@@ -65,15 +87,15 @@ export default function InternshipPostingsPage() {
           <div className="form-field"><label htmlFor="location-search">Konum</label>
             <input id="location-search" name="location" maxLength={250} defaultValue={parameters.get('location') || ''} placeholder="Şehir veya konum" /></div>
           <div className="form-field"><label htmlFor="work-arrangement">Çalışma biçimi</label>
-            <select id="work-arrangement" name="isRemote" defaultValue={parameters.get('isRemote') || ''}>
-              <option value="">Tümü</option><option value="true">Uzaktan</option><option value="false">İş yerinde</option>
+            <select id="work-arrangement" name="workArrangement" defaultValue={parameters.get('workArrangement') || ''}>
+              <option value="">Tümü</option><option value="OnSite">İş yerinde</option><option value="Hybrid">Hibrit</option><option value="Remote">Uzaktan</option>
             </select></div>
           <div className="search-actions"><button className="button primary-action" type="submit">İlan ara</button>
             <button className="button secondary-button" type="button" onClick={() => setParameters({})}>Temizle</button></div>
         </form>
         <div className="section-heading">
           <h2 id="opportunities-heading">Staj ilanları</h2>
-          {!isLoading && !error && <span className="result-count">{postings.length} ilan</span>}
+          {!isLoading && !error && <span className="result-count">{pagination.totalCount} ilan</span>}
         </div>
         {isLoading ? <LoadingState /> : error ? (
           <StatePanel title="Staj ilanları yüklenemedi" isError onRetry={() => setAttempt((value) => value + 1)}>{error}</StatePanel>
@@ -81,7 +103,8 @@ export default function InternshipPostingsPage() {
           filters ? <StatePanel title="Aramanıza uygun ilan bulunamadı">Anahtar kelimeyi veya filtreleri değiştirerek tekrar deneyebilirsiniz.</StatePanel> :
           <StatePanel title="Yeni staj ilanları yolda">Şu anda yayımlanmış staj ilanı bulunmuyor. Yeni fırsatlar için daha sonra tekrar göz atabilirsin.</StatePanel>
         ) : (
-          <div className="posting-grid">{postings.map((posting) => <InternshipPostingCard key={posting.id} posting={posting} />)}</div>
+          <><div className="posting-grid">{postings.map((posting) => <InternshipPostingCard key={posting.id} posting={posting} />)}</div>
+          <Pagination page={pagination.page} totalPages={pagination.totalPages} onPageChange={changePage} /></>
         )}
       </section>
       <p className="listing-footnote">Yakından incele. Her staj, yeni bir öğrenme fırsatı.</p>

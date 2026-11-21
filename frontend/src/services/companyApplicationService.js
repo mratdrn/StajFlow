@@ -2,9 +2,12 @@ import { apiRequest } from "./apiClient.js";
 
 const path = '/api/companies/me/applications';
 
-export function getIncomingApplications(postingId, signal) {
-  const query = postingId ? `?${new URLSearchParams({ internshipPostingId: postingId })}` : '';
-  return apiRequest(`${path}${query}`, { signal });
+export function getIncomingApplications(postingId, signal, page, status = '') {
+  const query = new URLSearchParams();
+  if (postingId) query.set('internshipPostingId', postingId);
+  if (page !== undefined) query.set('page', page);
+  if (status) query.set('status', status);
+  return apiRequest(`${path}${query.size ? `?${query}` : ''}`, { signal });
 }
 
 export function getIncomingApplication(id, signal) {

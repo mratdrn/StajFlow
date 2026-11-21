@@ -34,6 +34,20 @@ public class ResumesController(IResumeService service, IOptions<ResumeStorageOpt
         return CreatedAtAction(nameof(ViewFile), new { id = result.Resume!.Id }, result.Resume);
     }
 
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    {
+        var result = await service.DeleteAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, id, cancellationToken);
+        return result switch
+        {
+            ResumeDeletionResult.Succeeded => NoContent(),
+            ResumeDeletionResult.NotFound => NotFound(),
+            ResumeDeletionResult.InUse => Conflict(new { message = "Bu özgeçmiş bir başvuruda kullanıldığı için kaldırılamaz. Başvuru geçmişinizdeki CV korunur." }),
+            _ => StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "Özgeçmiş şu anda kaldırılamadı. Dosya açıksa kapatıp tekrar deneyin." })
+        };
+    }
+
     [HttpGet("{id:int}/file")]
     public async Task<IActionResult> ViewFile(int id, CancellationToken cancellationToken)
     {

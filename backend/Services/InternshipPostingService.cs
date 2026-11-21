@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using StajFlow.Api.Data;
 using StajFlow.Api.DTOs;
 using StajFlow.Api.Entities;
@@ -8,8 +9,39 @@ namespace StajFlow.Api.Services;
 
 public class InternshipPostingService(ApplicationDbContext context) : IInternshipPostingService
 {
+    internal static readonly Expression<Func<InternshipPosting, InternshipPostingDetailDto>> DetailProjection =
+        posting => new InternshipPostingDetailDto(
+            posting.Id,
+            posting.Title,
+            posting.Description,
+            posting.CompanyProfileId,
+            posting.CompanyProfile.Name,
+            posting.Location,
+            posting.WorkArrangement.ToString(),
+            posting.Status.ToString(),
+            posting.ApplicationDeadline,
+            posting.StartDate,
+            posting.EndDate,
+            posting.CreatedAt,
+            posting.Requirements
+                .OrderBy(requirement => requirement.Type)
+                .ThenBy(requirement => requirement.Id)
+                .Select(requirement => new InternshipRequirementDto(
+                    requirement.Id,
+                    requirement.Description,
+                    requirement.Type.ToString()))
+                .ToList(), posting.ShortDescription,
+            posting.CompanyProfile.LogoVersion.HasValue ? "/api/companies/" + posting.CompanyProfileId + "/logo?v=" + posting.CompanyProfile.LogoVersion.Value.ToString().ToLower() : null);
+
     public async Task<IReadOnlyList<InternshipPostingListDto>> ListAsync(
-        PostingSearchRequest search, CancellationToken cancellationToken = default)
+        PostingSearchRequest search, CancellationToken cancellationToken = default) =>
+        await BuildListQuery(search).ToListAsync(cancellationToken);
+
+    public Task<PagedResult<InternshipPostingListDto>> ListPageAsync(
+        PostingSearchRequest search, int page, CancellationToken cancellationToken) =>
+        BuildListQuery(search).ToPageAsync(page, 9, cancellationToken);
+
+    private IQueryable<InternshipPostingListDto> BuildListQuery(PostingSearchRequest search)
     {
         var now = DateTimeOffset.UtcNow;
         var query = context.InternshipPostings
@@ -23,10 +55,13 @@ public class InternshipPostingService(ApplicationDbContext context) : IInternshi
                 (posting.ShortDescription != null && posting.ShortDescription.Contains(keyword)) || posting.CompanyProfile.Name.Contains(keyword));
         if (!string.IsNullOrEmpty(location))
             query = query.Where(posting => posting.Location != null && posting.Location.Contains(location));
-        if (search.IsRemote.HasValue)
-            query = query.Where(posting => posting.IsRemote == search.IsRemote.Value);
+        if (search.WorkArrangement is not null)
+        {
+            var arrangement = Enum.Parse<WorkArrangement>(search.WorkArrangement);
+            query = query.Where(posting => posting.WorkArrangement == arrangement);
+        }
 
-        return await query
+        return query
             .OrderByDescending(posting => posting.CreatedAt)
             .ThenByDescending(posting => posting.Id)
             .Select(posting => new InternshipPostingListDto(
@@ -34,13 +69,13 @@ public class InternshipPostingService(ApplicationDbContext context) : IInternshi
                 posting.Title,
                 posting.CompanyProfile.Name,
                 posting.Location,
-                posting.IsRemote,
+                posting.WorkArrangement.ToString(),
                 posting.Status.ToString(),
                 posting.ApplicationDeadline,
                 posting.StartDate,
                 posting.EndDate,
-                posting.CreatedAt, posting.ShortDescription))
-            .ToListAsync(cancellationToken);
+                posting.CreatedAt, posting.ShortDescription,
+                posting.CompanyProfile.LogoVersion.HasValue ? "/api/companies/" + posting.CompanyProfileId + "/logo?v=" + posting.CompanyProfile.LogoVersion.Value.ToString().ToLower() : null));
     }
 
     public async Task<InternshipPostingDetailDto?> GetByIdAsync(
@@ -51,27 +86,7 @@ public class InternshipPostingService(ApplicationDbContext context) : IInternshi
             .AsNoTracking()
             .Where(posting => posting.Id == id && posting.Status == PostingStatus.Published &&
                 (posting.ApplicationDeadline == null || posting.ApplicationDeadline > now))
-            .Select(posting => new InternshipPostingDetailDto(
-                posting.Id,
-                posting.Title,
-                posting.Description,
-                posting.CompanyProfileId,
-                posting.CompanyProfile.Name,
-                posting.Location,
-                posting.IsRemote,
-                posting.Status.ToString(),
-                posting.ApplicationDeadline,
-                posting.StartDate,
-                posting.EndDate,
-                posting.CreatedAt,
-                posting.Requirements
-                    .OrderBy(requirement => requirement.Type)
-                    .ThenBy(requirement => requirement.Id)
-                    .Select(requirement => new InternshipRequirementDto(
-                        requirement.Id,
-                        requirement.Description,
-                        requirement.Type.ToString()))
-                    .ToList(), posting.ShortDescription))
+            .Select(DetailProjection)
             .SingleOrDefaultAsync(cancellationToken);
     }
 }

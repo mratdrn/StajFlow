@@ -23,13 +23,15 @@ public abstract class PostingContentRequest : IValidatableObject
     [JsonPropertyName("location")]
     public string? Location { get; set; }
 
-    [JsonPropertyName("isRemote")]
-    public bool IsRemote { get; set; }
+    [Required(ErrorMessage = "Çalışma biçimini seçin.")]
+    [AllowedValues("OnSite", "Hybrid", "Remote", ErrorMessage = "Çalışma biçimi geçersiz.")]
+    [JsonPropertyName("workArrangement")]
+    public string WorkArrangement { get; set; } = "OnSite";
 
     [Required(ErrorMessage = "İlan durumunu seçin.")]
-    [AllowedValues("Draft", "Published", "Closed", ErrorMessage = "İlan durumu geçersiz.")]
+    [AllowedValues("Draft", "Published", ErrorMessage = "İlan durumu geçersiz.")]
     [JsonPropertyName("status")]
-    public string Status { get; set; } = "Draft";
+    public string Status { get; set; } = "Published";
 
     [JsonPropertyName("applicationDeadline")]
     public DateTimeOffset? ApplicationDeadline { get; set; }

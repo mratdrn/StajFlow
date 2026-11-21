@@ -8,7 +8,7 @@ public record InternshipApplicationDto(
     [property: JsonPropertyName("title")] string Title,
     [property: JsonPropertyName("companyName")] string CompanyName,
     [property: JsonPropertyName("location")] string? Location,
-    [property: JsonPropertyName("isRemote")] bool IsRemote,
+    [property: JsonPropertyName("workArrangement")] string WorkArrangement,
     [property: JsonPropertyName("postingStatus")] string PostingStatus,
     [property: JsonPropertyName("resumeId")] int ResumeId,
     [property: JsonPropertyName("resumeFileName")] string ResumeFileName,

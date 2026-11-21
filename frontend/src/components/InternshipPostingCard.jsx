@@ -1,14 +1,15 @@
+import CompanyAvatar from "./CompanyAvatar.jsx";
 import { Link } from "react-router";
 import Icon from "./Icon.jsx";
-import { formatDate, companyInitials, locationLabel } from "./formatters.js";
+import { formatDate, locationLabel, workArrangementLabel } from "./formatters.js";
 
 export default function InternshipPostingCard({ posting }) {
   return (
     <article className="posting-card">
       <div className="card-top">
-        <span className="company-avatar" aria-hidden="true">{companyInitials(posting.companyName)}</span>
-        <span className={`badge ${posting.isRemote ? 'badge-remote' : ''}`}>
-          {posting.isRemote ? 'Uzaktan' : 'İş yerinde'}
+        <CompanyAvatar name={posting.companyName} logoUrl={posting.companyLogoUrl} />
+        <span className="badge">
+          {workArrangementLabel(posting.workArrangement)}
         </span>
       </div>
       <p className="company-name">{posting.companyName}</p>

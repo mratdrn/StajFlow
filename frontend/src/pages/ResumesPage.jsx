@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import { getResumes, uploadResume } from "../services/resumeService.js";
+import { getResumes, uploadResume, deleteResume } from "../services/resumeService.js";
 import StatePanel from "../components/StatePanel.jsx";
 import LoadingState from "../components/LoadingState.jsx";
 
@@ -11,6 +11,9 @@ export default function ResumesPage() {
   const [success, setSuccess] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [removeError, setRemoveError] = useState('');
+  const removalAbort = useRef(null);
   const fileField = useRef(null);
   const uploadAbort = useRef(null);
 
@@ -27,7 +30,7 @@ export default function ResumesPage() {
     return () => abort.abort();
   }, [attempt]);
 
-  useEffect(() => () => uploadAbort.current?.abort(), []);
+  useEffect(() => () => { uploadAbort.current?.abort(); removalAbort.current?.abort(); }, []);
 
   async function upload(event) {
     event.preventDefault();
@@ -55,25 +58,51 @@ export default function ResumesPage() {
     } finally { if (!abort.signal.aborted) setIsLoading(false); }
   }
 
+  async function remove(resume) {
+    if (deletingId !== null) return;
+    const abort = new AbortController();
+    removalAbort.current = abort;
+    setDeletingId(resume.id);
+    setRemoveError('');
+    setSuccess('');
+    try {
+      await deleteResume(resume.id, abort.signal);
+      if (abort.signal.aborted) return;
+      setData((previous) => ({ ...previous, resumes: previous.resumes.filter((item) => item.id !== resume.id) }));
+      setSuccess('Özgeçmişiniz kaldırıldı.');
+    } catch (failure) {
+      if (!abort.signal.aborted) setRemoveError(failure.message);
+    } finally { if (!abort.signal.aborted) setDeletingId(null); }
+  }
+
   return <>
     <p className="eyebrow">ÖĞRENCİ HESABI</p>
     <h1 className="page-title">Özgeçmişlerim</h1>
-    <p className="muted">PDF özgeçmişlerinizi yükleyin ve görüntüleyin. Dosyalarınıza yalnızca kendi hesabınızdan erişebilirsiniz.</p>
+    <p className="muted">PDF özgeçmişlerinizi yükleyin, görüntüleyin ve kaldırın. Başvuruda kullandığınız özgeçmişler kaldırılamaz.</p>
+    {success && <p className="success-notice" role="status">{success}</p>}
     {error ? <StatePanel title="Özgeçmişleriniz yüklenemedi" isError onRetry={() => setAttempt((value) => value + 1)}>{error}</StatePanel> : !data ? <LoadingState /> : <>
       <form className="resume-upload" onSubmit={upload}>
         <h2>PDF özgeçmiş yükle</h2>
         <div className="form-field"><label htmlFor="resume-file">PDF dosyası</label>
-          <input ref={fileField} id="resume-file" type="file" accept=".pdf,application/pdf" disabled={isLoading} aria-describedby="file-size-limit" />
+          <input ref={fileField} id="resume-file" type="file" accept=".pdf,application/pdf" disabled={isLoading || deletingId !== null} aria-describedby="file-size-limit" />
           <p className="field-hint" id="file-size-limit">En fazla {data.maxFileSizeBytes / 1024 / 1024} MB. Her yükleme ayrı bir özgeçmiş olarak saklanır.</p></div>
         {uploadError && <p className="form-alert" role="alert">{uploadError}</p>}
-        {success && <p className="success-notice" role="status">{success}</p>}
-        <button className="button primary-action" disabled={isLoading} type="submit">{isLoading ? 'Yükleniyor…' : 'Özgeçmiş yükle'}</button>
+        <button className="button primary-action" disabled={isLoading || deletingId !== null} type="submit">{isLoading ? 'Yükleniyor…' : 'Özgeçmiş yükle'}</button>
       </form>
       <section aria-labelledby="resume-list"><h2 id="resume-list">Yüklediğiniz özgeçmişler</h2>
+        {removeError && <p className="form-alert" role="alert">{removeError}</p>}
         {data.resumes.length === 0 ? <StatePanel title="Henüz özgeçmişiniz yok">İlk PDF özgeçmişinizi yukarıdaki alandan yükleyebilirsiniz.</StatePanel> :
           <div className="resume-list">{data.resumes.map((resume) => <article className="resume-card" key={resume.id}>
             <div><h3>{resume.originalFileName}</h3><p className="muted">{(resume.fileSizeBytes / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} KB · {new Date(resume.uploadedAt).toLocaleString('tr-TR')}</p></div>
-            <Link className="button secondary-button" aria-label={`Görüntüle: ${resume.originalFileName}`} to={`/ogrenci/ozgecmisler/${resume.id}`}>Görüntüle</Link>
+            <div className="resume-card-actions">
+              <Link className={`button${deletingId === resume.id ? ' disabled-link' : ''}`}
+                aria-disabled={deletingId === resume.id} aria-label={`Görüntüle: ${resume.originalFileName}`}
+                onClick={(event) => { if (deletingId === resume.id) event.preventDefault(); }}
+                to={`/ogrenci/ozgecmisler/${resume.id}`}>Görüntüle</Link>
+              <button className="button danger-button" type="button" disabled={isLoading || deletingId !== null}
+                aria-label={`Kaldır: ${resume.originalFileName}`} onClick={() => remove(resume)}>
+                {deletingId === resume.id ? 'Kaldırılıyor…' : 'Kaldır'}</button>
+            </div>
           </article>)}</div>}
       </section>
     </>}

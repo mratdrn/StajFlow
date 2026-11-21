@@ -1,5 +1,9 @@
+using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using StajFlow.Api.Data;
 
 #nullable disable
 
@@ -16,440 +20,6 @@ namespace StajFlow.Api.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("StajFlow.Api.Entities.StudentProfile", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("Id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("FirstName");
-
-                    b.Property<string>("Biography")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)")
-                        .HasColumnName("Biography");
-
-                    b.Property<string>("Department")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasColumnName("Department");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(254)
-                        .HasColumnType("nvarchar(254)")
-                        .HasColumnName("Email");
-
-                    b.Property<string>("IdentityUserId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)")
-                        .HasColumnName("IdentityUserId");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetimeoffset")
-                        .HasColumnName("CreatedAt")
-                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("LastName");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)")
-                        .HasColumnName("PhoneNumber");
-
-                    b.Property<string>("University")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasColumnName("University");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IdentityUserId")
-                        .IsUnique()
-                        .HasFilter("[IdentityUserId] IS NOT NULL");
-
-                    b.ToTable("StudentProfiles");
-                });
-
-            modelBuilder.Entity("StajFlow.Api.Entities.Resume", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("Id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("StorageKey")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)")
-                        .HasColumnName("StorageKey");
-
-                    b.Property<long>("FileSizeBytes")
-                        .HasColumnType("bigint")
-                        .HasColumnName("FileSizeBytes");
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
-                        .HasColumnName("ContentType");
-
-                    b.Property<int>("StudentProfileId")
-                        .HasColumnType("int")
-                        .HasColumnName("StudentProfileId");
-
-                    b.Property<string>("OriginalFileName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
-                        .HasColumnName("OriginalFileName");
-
-                    b.Property<DateTimeOffset>("UploadedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetimeoffset")
-                        .HasColumnName("UploadedAt")
-                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StorageKey")
-                        .IsUnique();
-
-                    b.HasIndex("StudentProfileId");
-
-                    b.ToTable("Resumes", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_Resumes_FileSizeBytes", "[FileSizeBytes] > 0");
-                        });
-                });
-
-            modelBuilder.Entity("StajFlow.Api.Entities.CompanyProfile", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("Id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(6000)
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("Description");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasColumnName("Name");
-
-                    b.Property<string>("ContactEmail")
-                        .IsRequired()
-                        .HasMaxLength(254)
-                        .HasColumnType("nvarchar(254)")
-                        .HasColumnName("ContactEmail");
-
-                    b.Property<string>("Location")
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)")
-                        .HasColumnName("Location");
-
-                    b.Property<string>("IdentityUserId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)")
-                        .HasColumnName("IdentityUserId");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetimeoffset")
-                        .HasColumnName("CreatedAt")
-                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
-
-                    b.Property<string>("Industry")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
-                        .HasColumnName("Industry");
-
-                    b.Property<string>("WebsiteUrl")
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)")
-                        .HasColumnName("WebsiteUrl");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IdentityUserId")
-                        .IsUnique()
-                        .HasFilter("[IdentityUserId] IS NOT NULL");
-
-                    b.ToTable("CompanyProfiles");
-                });
-
-            modelBuilder.Entity("StajFlow.Api.Entities.InternshipApplication", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("Id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTimeOffset>("AppliedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetimeoffset")
-                        .HasColumnName("AppliedAt")
-                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("Status");
-
-                    b.Property<DateTimeOffset?>("StatusUpdatedAt")
-                        .HasColumnType("datetimeoffset")
-                        .HasColumnName("StatusUpdatedAt");
-
-                    b.Property<int>("StudentProfileId")
-                        .HasColumnType("int")
-                        .HasColumnName("StudentProfileId");
-
-                    b.Property<string>("CoverLetter")
-                        .HasMaxLength(6000)
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CoverLetter");
-
-                    b.Property<int>("ResumeId")
-                        .HasColumnType("int")
-                        .HasColumnName("ResumeId");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion")
-                        .HasColumnName("RowVersion");
-
-                    b.Property<int>("InternshipPostingId")
-                        .HasColumnType("int")
-                        .HasColumnName("InternshipPostingId");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StudentProfileId", "InternshipPostingId")
-                        .IsUnique();
-
-                    b.HasIndex("ResumeId", "StudentProfileId");
-
-                    b.HasIndex("InternshipPostingId", "Status");
-
-                    b.ToTable("Applications", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_Applications_Status", "[Status] IN ('Submitted','UnderReview','Shortlisted','Accepted','Rejected','Withdrawn')");
-
-                            t.HasCheckConstraint("CK_Applications_StatusUpdatedAt", "[StatusUpdatedAt] IS NULL OR [StatusUpdatedAt] >= [AppliedAt]");
-                        });
-                });
-
-            modelBuilder.Entity("StajFlow.Api.Entities.InternshipRequirement", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("Id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)")
-                        .HasColumnName("Description");
-
-                    b.Property<int>("InternshipPostingId")
-                        .HasColumnType("int")
-                        .HasColumnName("InternshipPostingId");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("Type");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InternshipPostingId");
-
-                    b.ToTable("InternshipRequirements", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_InternshipRequirements_Type", "[Type] IN ('Required','Preferred')");
-                        });
-                });
-
-            modelBuilder.Entity("StajFlow.Api.Entities.InternshipPosting", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("Id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(10000)
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("Description");
-
-                    b.Property<DateOnly?>("StartDate")
-                        .HasColumnType("date")
-                        .HasColumnName("StartDate");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
-                        .HasColumnName("Title");
-
-                    b.Property<DateOnly?>("EndDate")
-                        .HasColumnType("date")
-                        .HasColumnName("EndDate");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("Status");
-
-                    b.Property<string>("ShortDescription")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)")
-                        .HasColumnName("ShortDescription");
-
-                    b.Property<string>("Location")
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)")
-                        .HasColumnName("Location");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetimeoffset")
-                        .HasColumnName("CreatedAt")
-                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion")
-                        .HasColumnName("RowVersion");
-
-                    b.Property<int>("CompanyProfileId")
-                        .HasColumnType("int")
-                        .HasColumnName("CompanyProfileId");
-
-                    b.Property<DateTimeOffset?>("ApplicationDeadline")
-                        .HasColumnType("datetimeoffset")
-                        .HasColumnName("ApplicationDeadline");
-
-                    b.Property<bool>("IsRemote")
-                        .HasColumnType("bit")
-                        .HasColumnName("IsRemote");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CompanyProfileId");
-
-                    b.HasIndex("Status", "ApplicationDeadline");
-
-                    b.ToTable("InternshipPostings", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_InternshipPostings_Dates", "[EndDate] IS NULL OR [StartDate] IS NULL OR [EndDate] >= [StartDate]");
-
-                            t.HasCheckConstraint("CK_InternshipPostings_Status", "[Status] IN ('Draft','Published','Closed')");
-                        });
-                });
-
-            modelBuilder.Entity("StajFlow.Api.Entities.ApplicationUser", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("AccessFailedCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("NormalizedEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedUserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("SecurityStamp")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("UserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedEmail")
-                        .IsUnique()
-                        .HasDatabaseName("EmailIndex")
-                        .HasFilter("[NormalizedEmail] IS NOT NULL");
-
-                    b.HasIndex("NormalizedUserName")
-                        .IsUnique()
-                        .HasDatabaseName("UserNameIndex")
-                        .HasFilter("[NormalizedUserName] IS NOT NULL");
-
-                    b.ToTable("AspNetUsers", (string)null);
-                });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
@@ -600,81 +170,454 @@ namespace StajFlow.Api.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("StajFlow.Api.Entities.StudentProfile", b =>
+            modelBuilder.Entity("StajFlow.Api.Entities.ApplicationUser", b =>
                 {
-                    b.HasOne("StajFlow.Api.Entities.ApplicationUser", null)
-                        .WithOne("StudentProfile")
-                        .HasForeignKey("StajFlow.Api.Entities.StudentProfile", "IdentityUserId")
-                        .OnDelete(DeleteBehavior.NoAction);
-                });
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
-            modelBuilder.Entity("StajFlow.Api.Entities.Resume", b =>
-                {
-                    b.HasOne("StajFlow.Api.Entities.StudentProfile", "StudentProfile")
-                        .WithMany("Resumes")
-                        .HasForeignKey("StudentProfileId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                    b.Property<int>("AccessFailedCount")
+                        .HasColumnType("int");
 
-                    b.Navigation("StudentProfile");
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("LockoutEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("NormalizedEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("PhoneNumberConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("SecurityStamp")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedEmail")
+                        .IsUnique()
+                        .HasDatabaseName("EmailIndex")
+                        .HasFilter("[NormalizedEmail] IS NOT NULL");
+
+                    b.HasIndex("NormalizedUserName")
+                        .IsUnique()
+                        .HasDatabaseName("UserNameIndex")
+                        .HasFilter("[NormalizedUserName] IS NOT NULL");
+
+                    b.ToTable("AspNetUsers", (string)null);
                 });
 
             modelBuilder.Entity("StajFlow.Api.Entities.CompanyProfile", b =>
                 {
-                    b.HasOne("StajFlow.Api.Entities.ApplicationUser", null)
-                        .WithOne("CompanyProfile")
-                        .HasForeignKey("StajFlow.Api.Entities.CompanyProfile", "IdentityUserId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("Id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContactEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)")
+                        .HasColumnName("ContactEmail");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("CreatedAt")
+                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(6000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Description");
+
+                    b.Property<string>("IdentityUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("IdentityUserId");
+
+                    b.Property<string>("Industry")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("Industry");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Location");
+
+                    b.Property<string>("LogoContentType")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<byte[]>("LogoData")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid?>("LogoVersion")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("Name");
+
+                    b.Property<string>("WebsiteUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)")
+                        .HasColumnName("WebsiteUrl");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdentityUserId")
+                        .IsUnique()
+                        .HasFilter("[IdentityUserId] IS NOT NULL");
+
+                    b.ToTable("CompanyProfiles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CompanyProfiles_Logo", "([LogoData] IS NULL AND [LogoContentType] IS NULL AND [LogoVersion] IS NULL) OR ([LogoData] IS NOT NULL AND DATALENGTH([LogoData]) BETWEEN 1 AND 2097152 AND [LogoContentType] IS NOT NULL AND [LogoContentType] IN ('image/png','image/jpeg') AND [LogoVersion] IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("StajFlow.Api.Entities.InternshipApplication", b =>
                 {
-                    b.HasOne("StajFlow.Api.Entities.StudentProfile", "StudentProfile")
-                        .WithMany("Applications")
-                        .HasForeignKey("StudentProfileId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("Id");
 
-                    b.HasOne("StajFlow.Api.Entities.InternshipPosting", "InternshipPosting")
-                        .WithMany("Applications")
-                        .HasForeignKey("InternshipPostingId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.HasOne("StajFlow.Api.Entities.Resume", "Resume")
-                        .WithMany("Applications")
-                        .HasForeignKey("ResumeId", "StudentProfileId")
-                        .HasPrincipalKey("Id", "StudentProfileId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                    b.Property<DateTimeOffset>("AppliedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("AppliedAt")
+                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
 
-                    b.Navigation("StudentProfile");
+                    b.Property<string>("CoverLetter")
+                        .HasMaxLength(6000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("CoverLetter");
 
-                    b.Navigation("Resume");
+                    b.Property<int>("InternshipPostingId")
+                        .HasColumnType("int")
+                        .HasColumnName("InternshipPostingId");
 
-                    b.Navigation("InternshipPosting");
-                });
+                    b.Property<int>("ResumeId")
+                        .HasColumnType("int")
+                        .HasColumnName("ResumeId");
 
-            modelBuilder.Entity("StajFlow.Api.Entities.InternshipRequirement", b =>
-                {
-                    b.HasOne("StajFlow.Api.Entities.InternshipPosting", "InternshipPosting")
-                        .WithMany("Requirements")
-                        .HasForeignKey("InternshipPostingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion")
+                        .HasColumnName("RowVersion");
 
-                    b.Navigation("InternshipPosting");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("Status");
+
+                    b.Property<DateTimeOffset?>("StatusUpdatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("StatusUpdatedAt");
+
+                    b.Property<int>("StudentProfileId")
+                        .HasColumnType("int")
+                        .HasColumnName("StudentProfileId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InternshipPostingId", "Status");
+
+                    b.HasIndex("ResumeId", "StudentProfileId");
+
+                    b.HasIndex("StudentProfileId", "InternshipPostingId")
+                        .IsUnique();
+
+                    b.ToTable("Applications", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Applications_Status", "[Status] IN ('Submitted','UnderReview','Shortlisted','Accepted','Rejected','Withdrawn')");
+
+                            t.HasCheckConstraint("CK_Applications_StatusUpdatedAt", "[StatusUpdatedAt] IS NULL OR [StatusUpdatedAt] >= [AppliedAt]");
+                        });
                 });
 
             modelBuilder.Entity("StajFlow.Api.Entities.InternshipPosting", b =>
                 {
-                    b.HasOne("StajFlow.Api.Entities.CompanyProfile", "CompanyProfile")
-                        .WithMany("InternshipPostings")
-                        .HasForeignKey("CompanyProfileId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("Id");
 
-                    b.Navigation("CompanyProfile");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("ApplicationDeadline")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("ApplicationDeadline");
+
+                    b.Property<int>("CompanyProfileId")
+                        .HasColumnType("int")
+                        .HasColumnName("CompanyProfileId");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("CreatedAt")
+                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Description");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("EndDate");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("Location");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion")
+                        .HasColumnName("RowVersion");
+
+                    b.Property<string>("ShortDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("ShortDescription");
+
+                    b.Property<DateOnly?>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("StartDate");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("Status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("Title");
+
+                    b.Property<string>("WorkArrangement")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyProfileId");
+
+                    b.HasIndex("Status", "ApplicationDeadline");
+
+                    b.ToTable("InternshipPostings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InternshipPostings_Dates", "[EndDate] IS NULL OR [StartDate] IS NULL OR [EndDate] >= [StartDate]");
+
+                            t.HasCheckConstraint("CK_InternshipPostings_Status", "[Status] IN ('Draft','Published','Closed')");
+
+                            t.HasCheckConstraint("CK_InternshipPostings_WorkArrangement", "[WorkArrangement] IN ('OnSite','Hybrid','Remote')");
+                        });
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.InternshipRequirement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("Id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("Description");
+
+                    b.Property<int>("InternshipPostingId")
+                        .HasColumnType("int")
+                        .HasColumnName("InternshipPostingId");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("Type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InternshipPostingId");
+
+                    b.ToTable("InternshipRequirements", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_InternshipRequirements_Type", "[Type] IN ('Required','Preferred')");
+                        });
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.Resume", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("Id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("ContentType");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("FileSizeBytes");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("OriginalFileName");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("StorageKey");
+
+                    b.Property<int>("StudentProfileId")
+                        .HasColumnType("int")
+                        .HasColumnName("StudentProfileId");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("UploadedAt")
+                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique();
+
+                    b.HasIndex("StudentProfileId");
+
+                    b.ToTable("Resumes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Resumes_FileSizeBytes", "[FileSizeBytes] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.StudentProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("Id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Biography")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasColumnName("Biography");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("CreatedAt")
+                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+
+                    b.Property<string>("Department")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("Department");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)")
+                        .HasColumnName("Email");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("FirstName");
+
+                    b.Property<string>("IdentityUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("IdentityUserId");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("LastName");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasColumnName("PhoneNumber");
+
+                    b.Property<string>("University")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("University");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdentityUserId")
+                        .IsUnique()
+                        .HasFilter("[IdentityUserId] IS NOT NULL");
+
+                    b.ToTable("StudentProfiles");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -728,16 +671,88 @@ namespace StajFlow.Api.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("StajFlow.Api.Entities.StudentProfile", b =>
+            modelBuilder.Entity("StajFlow.Api.Entities.CompanyProfile", b =>
                 {
-                    b.Navigation("Applications");
+                    b.HasOne("StajFlow.Api.Entities.ApplicationUser", null)
+                        .WithOne("CompanyProfile")
+                        .HasForeignKey("StajFlow.Api.Entities.CompanyProfile", "IdentityUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
 
-                    b.Navigation("Resumes");
+            modelBuilder.Entity("StajFlow.Api.Entities.InternshipApplication", b =>
+                {
+                    b.HasOne("StajFlow.Api.Entities.InternshipPosting", "InternshipPosting")
+                        .WithMany("Applications")
+                        .HasForeignKey("InternshipPostingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("StajFlow.Api.Entities.StudentProfile", "StudentProfile")
+                        .WithMany("Applications")
+                        .HasForeignKey("StudentProfileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("StajFlow.Api.Entities.Resume", "Resume")
+                        .WithMany("Applications")
+                        .HasForeignKey("ResumeId", "StudentProfileId")
+                        .HasPrincipalKey("Id", "StudentProfileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("InternshipPosting");
+
+                    b.Navigation("Resume");
+
+                    b.Navigation("StudentProfile");
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.InternshipPosting", b =>
+                {
+                    b.HasOne("StajFlow.Api.Entities.CompanyProfile", "CompanyProfile")
+                        .WithMany("InternshipPostings")
+                        .HasForeignKey("CompanyProfileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("CompanyProfile");
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.InternshipRequirement", b =>
+                {
+                    b.HasOne("StajFlow.Api.Entities.InternshipPosting", "InternshipPosting")
+                        .WithMany("Requirements")
+                        .HasForeignKey("InternshipPostingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("InternshipPosting");
                 });
 
             modelBuilder.Entity("StajFlow.Api.Entities.Resume", b =>
                 {
-                    b.Navigation("Applications");
+                    b.HasOne("StajFlow.Api.Entities.StudentProfile", "StudentProfile")
+                        .WithMany("Resumes")
+                        .HasForeignKey("StudentProfileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("StudentProfile");
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.StudentProfile", b =>
+                {
+                    b.HasOne("StajFlow.Api.Entities.ApplicationUser", null)
+                        .WithOne("StudentProfile")
+                        .HasForeignKey("StajFlow.Api.Entities.StudentProfile", "IdentityUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.ApplicationUser", b =>
+                {
+                    b.Navigation("CompanyProfile");
+
+                    b.Navigation("StudentProfile");
                 });
 
             modelBuilder.Entity("StajFlow.Api.Entities.CompanyProfile", b =>
@@ -752,11 +767,16 @@ namespace StajFlow.Api.Data.Migrations
                     b.Navigation("Requirements");
                 });
 
-            modelBuilder.Entity("StajFlow.Api.Entities.ApplicationUser", b =>
+            modelBuilder.Entity("StajFlow.Api.Entities.Resume", b =>
                 {
-                    b.Navigation("StudentProfile");
+                    b.Navigation("Applications");
+                });
 
-                    b.Navigation("CompanyProfile");
+            modelBuilder.Entity("StajFlow.Api.Entities.StudentProfile", b =>
+                {
+                    b.Navigation("Applications");
+
+                    b.Navigation("Resumes");
                 });
 #pragma warning restore 612, 618
         }

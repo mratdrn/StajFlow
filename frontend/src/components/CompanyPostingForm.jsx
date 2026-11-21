@@ -14,10 +14,14 @@ function toLocalDateTime(isoDate) {
 export default function CompanyPostingForm({ posting, onSaved, reload }) {
   const [fields, setFields] = useState({
     title: posting?.title || '', shortDescription: posting?.shortDescription || '', description: posting?.description || '', location: posting?.location || '',
-    isRemote: posting?.isRemote || false, status: posting?.status || 'Draft',
+    workArrangement: posting?.workArrangement || 'OnSite', status: posting?.status === 'Closed' ? 'Draft' : posting?.status || 'Published',
     applicationDeadline: toLocalDateTime(posting?.applicationDeadline),
     startDate: posting?.startDate || '', endDate: posting?.endDate || '',
   });
+  const originalDeadline = toLocalDateTime(posting?.applicationDeadline);
+  const requiresFutureDeadline = !posting || fields.applicationDeadline !== originalDeadline ||
+    (fields.status === 'Published' && posting.status !== 'Published');
+  const minimumDeadline = toLocalDateTime(new Date(Math.ceil(Date.now() / 60000) * 60000));
   const [requirements, setRequirements] = useState(() =>
     (posting?.requirements || []).map((item) => ({ ...item, key: crypto.randomUUID() })));
   const [errors, setErrors] = useState({});
@@ -39,6 +43,10 @@ export default function CompanyPostingForm({ posting, onSaved, reload }) {
       setErrors({ endDate: ['Bitiş tarihi başlangıç tarihinden önce olamaz.'] });
       return;
     }
+    if (requiresFutureDeadline && fields.applicationDeadline && new Date(fields.applicationDeadline).getTime() <= Date.now()) {
+      setErrors({ applicationDeadline: ['Son başvuru için bugün veya sonraki bir tarih ve henüz geçmemiş bir saat seçin.'] });
+      return;
+    }
     setIsSaving(true);
     try {
       const body = {
@@ -53,7 +61,7 @@ export default function CompanyPostingForm({ posting, onSaved, reload }) {
       };
       if (posting) await updateCompanyPosting(posting.id, body);
       else await createCompanyPosting(body);
-      onSaved();
+      onSaved(body.status);
     } catch (failure) {
       setError(failure.message);
       setErrors(failure.errors || {});
@@ -98,12 +106,17 @@ export default function CompanyPostingForm({ posting, onSaved, reload }) {
         <FormField name="description" label="İş tanımı" required maxLength={10000} multiline rows={7} value={fields.description} onChange={handleChange} errors={errors} />
         <div className="posting-form-grid">
           <FormField name="location" label="Konum" maxLength={250} value={fields.location} onChange={handleChange} errors={errors} />
-          <FormField name="applicationDeadline" label="Son başvuru tarihi" type="datetime-local" value={fields.applicationDeadline} onChange={handleChange} errors={errors} />
+          <FormField name="applicationDeadline" label="Son başvuru tarihi" type="datetime-local" min={requiresFutureDeadline ? minimumDeadline : undefined} value={fields.applicationDeadline} onChange={handleChange} errors={errors} />
         </div>
-        <label className="remote-work-choice"><input type="checkbox" checked={fields.isRemote} onChange={(event) => setFields({ ...fields, isRemote: event.target.checked })} />Uzaktan çalışma</label>
+        <div className="form-field"><label htmlFor="posting-work-arrangement">Çalışma biçimi</label>
+          <select id="posting-work-arrangement" name="workArrangement" value={fields.workArrangement} onChange={handleChange}>
+            <option value="OnSite">İş yerinde</option><option value="Hybrid">Hibrit</option><option value="Remote">Uzaktan</option>
+          </select>
+          {(errors.WorkArrangement || errors.workArrangement || []).map((message) => <p className="field-errors" key={message}>{message}</p>)}
+        </div>
         <div className="form-field"><label htmlFor="posting-status">İlan durumu</label>
           <select id="posting-status" name="status" value={fields.status} onChange={handleChange}>
-            {(posting ? ['Draft', 'Published', 'Closed'] : ['Draft', 'Published']).map((status) => <option key={status} value={status}>{postingStatusLabel(status)}</option>)}
+            {['Published', 'Draft'].map((status) => <option key={status} value={status}>{postingStatusLabel(status)}</option>)}
           </select>
           {(errors.Status || errors.status || []).map((message) => <p className="field-errors" key={message}>{message}</p>)}
         </div>

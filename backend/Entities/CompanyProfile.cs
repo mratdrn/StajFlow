@@ -21,6 +21,9 @@ public class CompanyProfile
     public string? Industry { get; set; }
     [Column("Location")]
     public string? Location { get; set; }
+    public byte[]? LogoData { get; set; }
+    public string? LogoContentType { get; set; }
+    public Guid? LogoVersion { get; set; }
     [Column("CreatedAt")]
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<InternshipPosting> InternshipPostings { get; set; } = new List<InternshipPosting>();

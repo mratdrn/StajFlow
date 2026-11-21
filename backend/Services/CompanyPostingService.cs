@@ -20,7 +20,7 @@ public class CompanyPostingService(ApplicationDbContext context) : ICompanyPosti
         return await query
             .OrderByDescending(posting => posting.CreatedAt).ThenByDescending(posting => posting.Id)
             .Select(posting => new InternshipPostingListDto(posting.Id, posting.Title, posting.CompanyProfile.Name,
-                posting.Location, posting.IsRemote, posting.Status.ToString(), posting.ApplicationDeadline,
+                posting.Location, posting.WorkArrangement.ToString(), posting.Status.ToString(), posting.ApplicationDeadline,
                 posting.StartDate, posting.EndDate, posting.CreatedAt, posting.ShortDescription))
             .ToListAsync(cancellationToken);
     }
@@ -37,6 +37,8 @@ public class CompanyPostingService(ApplicationDbContext context) : ICompanyPosti
         var companyId = await context.CompanyProfiles.Where(company => company.IdentityUserId == userId)
             .Select(company => (int?)company.Id).SingleOrDefaultAsync(cancellationToken);
         if (companyId is null) return new(null, PostingManagementError.NotFound);
+        if (request.ApplicationDeadline <= DateTimeOffset.UtcNow)
+            return new(null, PostingManagementError.InvalidDeadline);
 
         var posting = new InternshipPosting { CompanyProfileId = companyId.Value, Title = request.Title.Trim(), Description = request.Description.Trim() };
         ApplyContent(posting, request);
@@ -56,6 +58,10 @@ public class CompanyPostingService(ApplicationDbContext context) : ICompanyPosti
         var version = Convert.FromBase64String(request.RowVersion);
         if (!posting.RowVersion.AsSpan().SequenceEqual(version))
             return new(null, PostingManagementError.VersionConflict);
+        if (request.ApplicationDeadline <= DateTimeOffset.UtcNow &&
+            (request.ApplicationDeadline != posting.ApplicationDeadline ||
+             (request.Status == "Published" && posting.Status != PostingStatus.Published)))
+            return new(null, PostingManagementError.InvalidDeadline);
         var existing = posting.Requirements.ToDictionary(requirement => requirement.Id);
         if (request.Requirements.Any(requirement => requirement.Id.HasValue && !existing.ContainsKey(requirement.Id.Value)))
             return new(null, PostingManagementError.InvalidRequirement);
@@ -95,7 +101,7 @@ public class CompanyPostingService(ApplicationDbContext context) : ICompanyPosti
         posting.ShortDescription = string.IsNullOrWhiteSpace(request.ShortDescription) ? null : request.ShortDescription.Trim();
         posting.Description = request.Description.Trim();
         posting.Location = string.IsNullOrWhiteSpace(request.Location) ? null : request.Location.Trim();
-        posting.IsRemote = request.IsRemote;
+        posting.WorkArrangement = Enum.Parse<WorkArrangement>(request.WorkArrangement);
         posting.Status = Enum.Parse<PostingStatus>(request.Status);
         posting.ApplicationDeadline = request.ApplicationDeadline;
         posting.StartDate = request.StartDate;
@@ -103,7 +109,7 @@ public class CompanyPostingService(ApplicationDbContext context) : ICompanyPosti
     }
 
     private static CompanyPostingDto CreateDto(InternshipPosting posting) => new(posting.Id, posting.Title, posting.Description,
-        posting.Location, posting.IsRemote, posting.Status.ToString(), posting.ApplicationDeadline, posting.StartDate,
+        posting.Location, posting.WorkArrangement.ToString(), posting.Status.ToString(), posting.ApplicationDeadline, posting.StartDate,
         posting.EndDate, posting.CreatedAt,
         posting.Requirements.OrderBy(requirement => requirement.Id)
             .Select(requirement => new InternshipRequirementDto(requirement.Id, requirement.Description, requirement.Type.ToString())).ToList(),

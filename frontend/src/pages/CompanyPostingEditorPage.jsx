@@ -31,9 +31,11 @@ export default function CompanyPostingEditorPage() {
     return () => abort.abort();
   }, [id, attempt]);
 
-  return <>
+  return <div className="company-editor-page">
     <Link className="back-link" to="/sirket/ilanlar">← İlanlarıma dön</Link>
-    <h1 className="page-title">{id ? 'İlanı düzenle' : 'Yeni staj ilanı'}</h1>
+    <div className="posting-management-heading"><div><p className="eyebrow">ŞİRKET HESABI</p>
+      <h1 className="page-title">{id ? 'İlanı düzenle' : 'Yeni staj ilanı'}</h1>
+      <p className="muted">İlan bilgilerini, aradığınız nitelikleri ve yayın tercihlerinizi düzenleyin.</p></div></div>
     {isLoading ? <LoadingState detail /> : error ?
       <StatePanel title={error.status === 404 ? 'İlan bulunamadı' : 'İlan yüklenemedi'}
         isError onRetry={error.status === 404 ? undefined : () => setAttempt((value) => value + 1)}>
@@ -41,6 +43,6 @@ export default function CompanyPostingEditorPage() {
       </StatePanel> :
       <CompanyPostingForm key={posting ? `${posting.id}-${posting.rowVersion}` : 'yeni'} posting={id ? posting : null}
         reload={() => setAttempt((value) => value + 1)}
-        onSaved={() => navigate('/sirket/ilanlar', { state: { success: id ? 'İlan ve nitelikler güncellendi.' : 'İlan oluşturuldu.' } })} />}
-  </>;
+        onSaved={(status) => navigate(status === 'Draft' ? '/sirket/taslak-ilanlar' : '/sirket/ilanlar', { state: { success: id ? 'İlan ve nitelikler güncellendi.' : 'İlan oluşturuldu.' } })} />}
+  </div>;
 }

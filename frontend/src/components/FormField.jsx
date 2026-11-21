@@ -5,6 +5,7 @@ export default function FormField({ name, label, errors = {}, hint, multiline = 
     field.setCustomValidity('');
     if (field.validity.valueMissing) field.setCustomValidity(`${label} alanını doldurun.`);
     else if (field.validity.typeMismatch) field.setCustomValidity(field.type === 'url' ? 'Geçerli bir web adresi girin.' : 'Geçerli bir e-posta adresi girin.');
+    else if (field.validity.rangeUnderflow && field.type === 'datetime-local') field.setCustomValidity('Bugün veya sonraki bir tarih ve henüz geçmemiş bir saat seçin.');
     else if (field.validity.tooShort) field.setCustomValidity(`${label} en az ${field.minLength} karakter olmalıdır.`);
     else if (!field.validity.valid) field.setCustomValidity('Lütfen geçerli bir değer girin.');
   }

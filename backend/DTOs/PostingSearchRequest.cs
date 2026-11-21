@@ -13,6 +13,7 @@ public class PostingSearchRequest
     [StringLength(250, ErrorMessage = "Konum en fazla 250 karakter olabilir.")]
     public string? Location { get; set; }
 
-    [FromQuery(Name = "isRemote")]
-    public bool? IsRemote { get; set; }
+    [FromQuery(Name = "workArrangement")]
+    [AllowedValues(null, "OnSite", "Hybrid", "Remote", ErrorMessage = "Çalışma biçimi geçersiz.")]
+    public string? WorkArrangement { get; set; }
 }

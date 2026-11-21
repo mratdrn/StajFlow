@@ -9,5 +9,6 @@ public record CompanyProfileDto(
     [property: JsonPropertyName("industry")] string? Industry,
     [property: JsonPropertyName("location")] string? Location,
     [property: JsonPropertyName("description")] string? Description,
-    [property: JsonPropertyName("websiteUrl")] string? WebsiteUrl);
+    [property: JsonPropertyName("websiteUrl")] string? WebsiteUrl,
+    [property: JsonPropertyName("logoUrl")] string? LogoUrl = null);
 

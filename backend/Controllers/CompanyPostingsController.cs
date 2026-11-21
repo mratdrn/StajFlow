@@ -48,6 +48,9 @@ public class CompanyPostingsController(ICompanyPostingService service) : Control
     {
         PostingManagementError.NotFound => NotFound(),
         PostingManagementError.VersionConflict => Conflict(new { message = "İlan başka bir işlemde güncellendi. Güncel sürümü yükleyip tekrar deneyin." }),
+        PostingManagementError.InvalidDeadline => ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            { ["applicationDeadline"] = ["Son başvuru için bugün veya sonraki bir tarih ve henüz geçmemiş bir saat seçin."] })
+            { Title = "Son başvuru tarihini kontrol edin." }),
         _ => ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
             { ["requirements"] = ["Nitelik listesinde bu ilana ait olmayan bir kayıt var."] }) { Title = "Bilgileri kontrol edin." })
     };

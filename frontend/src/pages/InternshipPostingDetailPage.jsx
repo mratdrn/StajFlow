@@ -1,7 +1,9 @@
+import CompanyAvatar from "../components/CompanyAvatar.jsx";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
+import { getMyApplicationPosting } from "../services/applicationService.js";
 import { getInternshipPosting } from "../services/internshipPostingService.js";
-import { formatDate, companyInitials, locationLabel } from "../components/formatters.js";
+import { formatDate, locationLabel, workArrangementLabel } from "../components/formatters.js";
 import Icon from "../components/Icon.jsx";
 import LoadingState from "../components/LoadingState.jsx";
 import StatePanel from "../components/StatePanel.jsx";
@@ -19,7 +21,7 @@ function Requirements({ title, requirements, type }) {
   );
 }
 
-export default function InternshipPostingDetailPage() {
+export default function InternshipPostingDetailPage({ applicationPosting = false }) {
   const { id } = useParams();
   const [state, setState] = useState({ isLoading: true, posting: null, error: null, notFound: false });
   const [attempt, setAttempt] = useState(0);
@@ -34,7 +36,8 @@ export default function InternshipPostingDetailPage() {
       return () => abortController.abort();
     }
 
-    getInternshipPosting(id, abortController.signal)
+    const loadPosting = applicationPosting ? getMyApplicationPosting : getInternshipPosting;
+    loadPosting(id, abortController.signal)
       .then((posting) => {
         if (abortController.signal.aborted) return;
         document.title = `${posting.title} | StajFlow`;
@@ -46,28 +49,34 @@ export default function InternshipPostingDetailPage() {
       });
 
     return () => abortController.abort();
-  }, [id, attempt]);
+  }, [id, attempt, applicationPosting]);
 
   const { isLoading, posting, error, notFound } = state;
+  const isExpired = posting?.applicationDeadline && new Date(posting.applicationDeadline) <= new Date();
+  const isOpen = posting?.status === 'Published' && !isExpired;
   return (
     <>
-      <Link className="back-link" to="/staj-ilanlari"><Icon name="back" />İlanlara dön</Link>
+      <Link className="back-link" to={applicationPosting ? `/ogrenci/basvurular/${id}` : '/staj-ilanlari'}><Icon name="back" />{applicationPosting ? 'Başvuruma dön' : 'İlanlara dön'}</Link>
       {isLoading ? <><h1 className="sr-only">İlan ayrıntıları</h1><LoadingState detail /></> : notFound ? (
-        <><h1 className="page-title">İlan bulunamadı</h1><StatePanel title="Bu ilan şu anda görüntülenemiyor" backLink>İlan kaldırılmış veya yayından alınmış olabilir. Diğer staj ilanlarını inceleyebilirsin.</StatePanel></>
+        <><h1 className="page-title">İlan bulunamadı</h1><StatePanel title="Bu ilan şu anda görüntülenemiyor" backLink={!applicationPosting}>{applicationPosting ? 'Başvuru bulunamadı veya bu ilanı görüntüleme yetkiniz yok.' : 'İlan kaldırılmış veya yayından alınmış olabilir. Diğer staj ilanlarını inceleyebilirsin.'}</StatePanel></>
       ) : error ? (
         <><h1 className="page-title">İlan ayrıntıları</h1><StatePanel title="İlan ayrıntıları yüklenemedi" isError onRetry={() => setAttempt((value) => value + 1)}>{error}</StatePanel></>
       ) : posting && (
         <>
           <header className="detail-header">
-            <div className="detail-company"><span className="company-avatar" aria-hidden="true">{companyInitials(posting.companyName)}</span><span>{posting.companyName}</span></div>
+            <div className="detail-company"><CompanyAvatar name={posting.companyName} logoUrl={posting.companyLogoUrl} /><span>{posting.companyName}</span></div>
             <h1>{posting.title}</h1>
             {posting.shortDescription && <p className="intro-copy">{posting.shortDescription}</p>}
             <div className="detail-tags">
-              <span className="badge badge-published"><span className="status-dot" />Yayında</span>
-              <span className="badge">{posting.isRemote ? 'Uzaktan' : 'İş yerinde'}</span>
+              <span className={`badge${isOpen ? ' badge-published' : ''}`}>{isOpen && <span className="status-dot" />}{isOpen ? 'Yayında' : isExpired ? 'Süresi doldu' : 'Başvuruya kapalı'}</span>
+              <span className="badge">{workArrangementLabel(posting.workArrangement)}</span>
               <span className="posted-date">Yayımlanma: {formatDate(posting.createdAt)}</span>
             </div>
           </header>
+          {applicationPosting && <p className="success-notice" role="status">{isExpired
+            ? 'Bu ilanın başvuru süresi dolmuştur. Mevcut başvurunuz korunur; ilanın ayrıntılarını inceleyebilirsiniz.'
+            : !isOpen ? 'Bu ilan yeni başvurulara kapalıdır. Mevcut başvurunuz üzerinden ayrıntıları inceleyebilirsiniz.'
+            : 'Başvurduğunuz ilanın güncel ayrıntılarını görüntülüyorsunuz.'}</p>}
           <div className="detail-grid">
             <article className="detail-content">
               <section>
@@ -77,13 +86,13 @@ export default function InternshipPostingDetailPage() {
               </section>
               <Requirements title="Zorunlu nitelikler" type="Required" requirements={posting.requirements} />
               <Requirements title="Tercih edilen nitelikler" type="Preferred" requirements={posting.requirements} />
-              <ApplicationForm key={posting.id} posting={posting} />
+              {applicationPosting ? <Link className="button" to={`/ogrenci/basvurular/${id}`}>Başvurumu görüntüle</Link> : <ApplicationForm key={posting.id} posting={posting} />}
             </article>
             <aside className="summary-card" aria-labelledby="summary-heading">
               <h2 id="summary-heading">Kısaca</h2>
               <dl>
                 <div><dt><Icon name="pin" />Konum</dt><dd>{locationLabel(posting)}</dd></div>
-                <div><dt><Icon name="globe" />Çalışma biçimi</dt><dd>{posting.isRemote ? 'Uzaktan' : 'İş yerinde'}</dd></div>
+                <div><dt><Icon name="globe" />Çalışma biçimi</dt><dd>{workArrangementLabel(posting.workArrangement)}</dd></div>
                 <div><dt><Icon name="clock" />Son başvuru tarihi</dt><dd>{formatDate(posting.applicationDeadline)}</dd></div>
                 <div><dt><Icon name="calendar" />Başlangıç tarihi</dt><dd>{formatDate(posting.startDate)}</dd></div>
                 <div><dt><Icon name="calendar" />Bitiş tarihi</dt><dd>{formatDate(posting.endDate)}</dd></div>

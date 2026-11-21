@@ -19,9 +19,8 @@ public class InternshipPosting
     public required string Description { get; set; }
     [Column("Location")]
     public string? Location { get; set; }
-    [Column("IsRemote")]
-    public bool IsRemote { get; set; }
-    public PostingStatus Status { get; set; } = PostingStatus.Draft;
+    public WorkArrangement WorkArrangement { get; set; } = WorkArrangement.OnSite;
+    public PostingStatus Status { get; set; } = PostingStatus.Published;
     [Column("ApplicationDeadline")]
     public DateTimeOffset? ApplicationDeadline { get; set; }
     [Column("StartDate")]

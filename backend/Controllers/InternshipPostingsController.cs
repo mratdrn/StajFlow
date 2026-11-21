@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using StajFlow.Api.DTOs;
 using StajFlow.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -10,9 +11,13 @@ public class InternshipPostingsController(IInternshipPostingService service) : C
 {
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<InternshipPostingListDto>>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<InternshipPostingListDto>>> List(
-        [FromQuery] PostingSearchRequest search, CancellationToken cancellationToken)
+    [ProducesResponseType<PagedResult<InternshipPostingListDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> List(
+        [FromQuery] PostingSearchRequest search,
+        [FromQuery, Range(1, int.MaxValue, ErrorMessage = "Sayfa numarası en az 1 olmalıdır.")] int? page,
+        CancellationToken cancellationToken)
     {
+        if (page.HasValue) return Ok(await service.ListPageAsync(search, page.Value, cancellationToken));
         return Ok(await service.ListAsync(search, cancellationToken));
     }
 

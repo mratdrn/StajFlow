@@ -28,7 +28,7 @@ export default function App() {
   }, [pathname]);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${user?.role === 'Company' ? ' company-workspace' : ''}`}>
       <a className="skip-link" href="#main-content">İçeriğe geç</a>
       <header className="site-header">
         <div className="container header-inner">
@@ -59,12 +59,14 @@ export default function App() {
             <Route path="/ogrenci/ozgecmisler" element={<ResumesPage />} />
             <Route path="/ogrenci/ozgecmisler/:id" element={<ResumeViewerPage />} />
             <Route path="/ogrenci/basvurular" element={<MyApplicationsPage />} />
+            <Route path="/ogrenci/basvurular/:id/ilan" element={<InternshipPostingDetailPage applicationPosting />} />
             <Route path="/ogrenci/basvurular/:id" element={<ApplicationDetailPage />} />
           </Route>
           <Route element={<ProtectedRoute role="Company" />}>
             <Route path="/sirket/profil" element={<ProfilePage role="Company" />} />
             <Route path="/sirket/ilanlar" element={<CompanyPostingsPage />} />
             <Route path="/sirket/gecmis-ilanlar" element={<CompanyPostingsPage archived />} />
+            <Route path="/sirket/taslak-ilanlar" element={<CompanyPostingsPage drafts />} />
             <Route path="/sirket/ilanlar/yeni" element={<CompanyPostingEditorPage key="new" />} />
             <Route path="/sirket/ilanlar/:id/duzenle" element={<CompanyPostingEditorPage key="edit" />} />
             <Route path="/sirket/basvurular" element={<IncomingApplicationsPage />} />

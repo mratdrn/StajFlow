@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router";
 import { profilePath, useAuth } from "./AuthProvider.jsx";
 
 export default function AuthNavigation() {
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading, isCheckingSession, notice, error: sessionError, logout } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -28,9 +28,10 @@ export default function AuthNavigation() {
           {user.role === 'Company' && <NavLink className="nav-link" to="/sirket/basvurular">Gelen başvurular</NavLink>}
           <NavLink className="nav-link" to={profilePath(user.role)}>{user.role === 'Student' ? 'Öğrenci profili' : 'Şirket profili'}</NavLink>
           {user.role === 'Company' && <NavLink className="nav-link" to="/sirket/gecmis-ilanlar">Geçmiş ilanlar</NavLink>}
+          {user.role === 'Company' && <NavLink className="nav-link" to="/sirket/taslak-ilanlar">Taslak ilanlar</NavLink>}
           {user.role === 'Student' && <NavLink className="nav-link" to="/ogrenci/ozgecmisler">Özgeçmişlerim</NavLink>}
           {user.role === 'Student' && <NavLink className="nav-link" to="/ogrenci/basvurular">Başvurularım</NavLink>}
-          <button className="nav-button" type="button" onClick={handleLogout} disabled={isProcessing}>{isProcessing ? 'Çıkış yapılıyor…' : 'Çıkış yap'}</button>
+          <button className="nav-button" type="button" onClick={handleLogout} disabled={isProcessing || isCheckingSession}>{isProcessing ? 'Çıkış yapılıyor…' : 'Çıkış yap'}</button>
         </>
       ) : (
         <>
@@ -39,7 +40,8 @@ export default function AuthNavigation() {
         </>
       )}
     </nav>
-    {error && <p className="nav-error" role="alert">{error}</p>}
+    {user && notice && <p className="nav-status" role="status">{notice}</p>}
+    {(error || sessionError) && <p className="nav-error" role="alert">{error || sessionError}</p>}
   </div>;
 }
 

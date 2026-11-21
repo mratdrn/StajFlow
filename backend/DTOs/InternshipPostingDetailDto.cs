@@ -8,12 +8,13 @@ public record InternshipPostingDetailDto(
     [property: JsonPropertyName("companyProfileId")] int CompanyProfileId,
     [property: JsonPropertyName("companyName")] string CompanyName,
     [property: JsonPropertyName("location")] string? Location,
-    [property: JsonPropertyName("isRemote")] bool IsRemote,
+    [property: JsonPropertyName("workArrangement")] string WorkArrangement,
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("applicationDeadline")] DateTimeOffset? ApplicationDeadline,
     [property: JsonPropertyName("startDate")] DateOnly? StartDate,
     [property: JsonPropertyName("endDate")] DateOnly? EndDate,
     [property: JsonPropertyName("createdAt")] DateTimeOffset CreatedAt,
     [property: JsonPropertyName("requirements")] IReadOnlyList<InternshipRequirementDto> Requirements,
-    [property: JsonPropertyName("shortDescription")] string? ShortDescription = null);
+    [property: JsonPropertyName("shortDescription")] string? ShortDescription = null,
+    [property: JsonPropertyName("companyLogoUrl")] string? CompanyLogoUrl = null);
 

@@ -17,7 +17,8 @@ public class ProfileService(ApplicationDbContext context) : IProfileService
     public Task<CompanyProfileDto?> GetCompanyAsync(string userId, CancellationToken cancellationToken) =>
         context.CompanyProfiles.AsNoTracking().Where(profile => profile.IdentityUserId == userId)
             .Select(profile => new CompanyProfileDto(profile.Id, profile.Name, profile.ContactEmail,
-                profile.Industry, profile.Location, profile.Description, profile.WebsiteUrl))
+                profile.Industry, profile.Location, profile.Description, profile.WebsiteUrl,
+                profile.LogoVersion.HasValue ? "/api/companies/" + profile.Id + "/logo?v=" + profile.LogoVersion.Value.ToString().ToLower() : null))
             .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<StudentProfileDto?> UpdateStudentAsync(string userId,

@@ -4,6 +4,7 @@ using StajFlow.Api.DTOs;
 using StajFlow.Api.Entities;
 using StajFlow.Api.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using UglyToad.PdfPig;
 
@@ -84,6 +85,62 @@ public class ResumeService(
         return new(new(resume.Id, name, resume.FileSizeBytes, resume.UploadedAt));
     }
 
+    public async Task<ResumeDeletionResult> DeleteAsync(string userId, int id, CancellationToken cancellationToken)
+    {
+        var resume = await context.Resumes.SingleOrDefaultAsync(
+            resume => resume.Id == id && resume.StudentProfile.IdentityUserId == userId, cancellationToken);
+        if (resume is null) return ResumeDeletionResult.NotFound;
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var path = GetStoragePath(resume.StorageKey);
+        byte[]? content = null;
+        var fileDeleted = false;
+        var committed = false;
+        try
+        {
+            if (await context.Applications.AnyAsync(application => application.ResumeId == id, cancellationToken))
+                return ResumeDeletionResult.InUse;
+            context.Resumes.Remove(resume);
+            await context.SaveChangesAsync(cancellationToken);
+            try { content = await File.ReadAllBytesAsync(path, cancellationToken); }
+            catch (FileNotFoundException) { }
+            catch (DirectoryNotFoundException) { }
+            if (content is not null)
+            {
+                File.Delete(path);
+                fileDeleted = true;
+            }
+            await transaction.CommitAsync(CancellationToken.None);
+            committed = true;
+            return ResumeDeletionResult.Succeeded;
+        }
+        catch (DbUpdateConcurrencyException) { return ResumeDeletionResult.NotFound; }
+        catch (DbUpdateException error) when (error.InnerException is SqlException { Number: 547 })
+        {
+            return ResumeDeletionResult.InUse;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or SqlException or DbUpdateException)
+        {
+            logger.LogError(error, "Özgeçmiş kaldırılamadı.");
+            return ResumeDeletionResult.Failed;
+        }
+        finally
+        {
+            if (!committed && fileDeleted && content is not null)
+            {
+                try
+                {
+                    await using var restored = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+                    await restored.WriteAsync(content, CancellationToken.None);
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                {
+                    logger.LogError(error, "İptal edilen kaldırma işleminde özgeçmiş dosyası geri yüklenemedi.");
+                    throw;
+                }
+            }
+        }
+    }
+
     public async Task<ResumeFile?> GetFileAsync(string userId, int id, CancellationToken cancellationToken)
     {
         var resume = await context.Resumes.AsNoTracking().SingleOrDefaultAsync(
@@ -111,11 +168,5 @@ public class ResumeService(
         catch (DirectoryNotFoundException) { return null; }
     }
 
-    private string GetStoragePath(string key)
-    {
-        if (key.Length != 36 || !key.EndsWith(".pdf", StringComparison.Ordinal) ||
-            !Guid.TryParseExact(key[..32], "N", out _))
-            throw new InvalidOperationException("Özgeçmiş depolama anahtarı geçersiz.");
-        return Path.Combine(Path.GetFullPath(settings.Directory, environment.ContentRootPath), key);
-    }
+    private string GetStoragePath(string key) => settings.GetStoragePath(environment.ContentRootPath, key);
 }

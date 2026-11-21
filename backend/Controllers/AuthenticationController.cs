@@ -50,6 +50,17 @@ public class AuthenticationController(IAuthenticationService service) : Controll
     }
 
     [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        var result = await service.ChangePasswordAsync(User, request);
+        if (result.Succeeded) return NoContent();
+        var errors = result.Errors.GroupBy(error => error.Code == "PasswordMismatch" ? "CurrentPassword" : "NewPassword")
+            .ToDictionary(group => group.Key, group => group.Select(error => error.Description).ToArray());
+        return ValidationProblem(new ValidationProblemDetails(errors) { Title = "Bilgileri kontrol edin." });
+    }
+
+    [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {

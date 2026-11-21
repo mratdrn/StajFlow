@@ -90,6 +90,23 @@ public class AuthenticationService(
         return result.Succeeded;
     }
 
+    public async Task<IdentityResult> ChangePasswordAsync(ClaimsPrincipal principal, ChangePasswordRequest request)
+    {
+        var user = await userManager.GetUserAsync(principal);
+        if (user is null) return IdentityResult.Failed(new IdentityError { Description = "Hesap bulunamadı." });
+
+        var check = await signInManager.CheckPasswordSignInAsync(user, request.CurrentPassword, lockoutOnFailure: true);
+        if (!check.Succeeded)
+            return IdentityResult.Failed(new IdentityError
+            {
+                Code = "PasswordMismatch", Description = "Mevcut parola hatalı veya hesap geçici olarak kilitli."
+            });
+
+        var result = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (result.Succeeded) await signInManager.RefreshSignInAsync(user);
+        return result;
+    }
+
     public async Task<bool> LogoutAsync(ClaimsPrincipal principal)
     {
         var user = await userManager.GetUserAsync(principal);
@@ -98,6 +115,51 @@ public class AuthenticationService(
         if (!result.Succeeded) return false;
         await signInManager.SignOutAsync();
         return true;
+    }
+
+    public async Task<CompanyAccountDeletionResult> DeleteCompanyAccountAsync(
+        ClaimsPrincipal principal, string password, CancellationToken cancellationToken)
+    {
+        var user = await userManager.GetUserAsync(principal);
+        if (user is null || !await userManager.IsInRoleAsync(user, UserRoles.Company))
+            return CompanyAccountDeletionResult.NotFound;
+
+        var passwordCheck = await signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
+        if (!passwordCheck.Succeeded) return CompanyAccountDeletionResult.InvalidPassword;
+
+        await using var transaction = await context.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, cancellationToken);
+        try
+        {
+            var company = await context.CompanyProfiles.SingleOrDefaultAsync(
+                profile => profile.IdentityUserId == user.Id, cancellationToken);
+            if (company is null) return CompanyAccountDeletionResult.NotFound;
+
+            await context.Applications.Where(application => application.InternshipPosting.CompanyProfileId == company.Id)
+                .ExecuteDeleteAsync(cancellationToken);
+            await context.InternshipRequirements.Where(requirement => requirement.InternshipPosting.CompanyProfileId == company.Id)
+                .ExecuteDeleteAsync(cancellationToken);
+            await context.InternshipPostings.Where(posting => posting.CompanyProfileId == company.Id)
+                .ExecuteDeleteAsync(cancellationToken);
+            context.CompanyProfiles.Remove(company);
+            await context.SaveChangesAsync(cancellationToken);
+
+            var deletion = await userManager.DeleteAsync(user);
+            if (!deletion.Succeeded) return CompanyAccountDeletionResult.Conflict;
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return CompanyAccountDeletionResult.Conflict;
+        }
+        catch (SqlException exception) when (exception.Number is 1205 or 547)
+        {
+            return CompanyAccountDeletionResult.Conflict;
+        }
+
+        await signInManager.SignOutAsync();
+        return CompanyAccountDeletionResult.Succeeded;
     }
 
     public async Task<CurrentUserDto?> GetCurrentUserAsync(ClaimsPrincipal principal, CancellationToken cancellationToken)

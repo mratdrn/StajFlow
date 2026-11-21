@@ -42,7 +42,7 @@ export default function LoginPage() {
     <section className="auth-card">
       <h2>Giriş yap</h2><p className="auth-subtitle">Sizi yeniden görmek güzel.</p>
       {location.state?.registered && <p className="success-notice" role="status">Hesabınız oluşturuldu. Devam etmek için giriş yapın.</p>}
-      {(notice || location.state?.loggedOut) && <p className="success-notice" role="status">Oturumunuz kapatıldı.</p>}
+      {(notice || location.state?.loggedOut) && <p className="success-notice" role="status">{notice || 'Oturumunuz kapatıldı.'}</p>}
       <form onSubmit={submit} aria-busy={isProcessing}>
         <fieldset disabled={isProcessing}>
           <FormField name="email" label="E-posta" type="email" autoComplete="username" maxLength={254} required value={fields.email} onChange={(event) => setFields({ ...fields, email: event.target.value })} errors={errors} />

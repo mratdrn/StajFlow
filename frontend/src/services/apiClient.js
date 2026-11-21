@@ -40,7 +40,7 @@ export async function apiRequest(path, { method = 'GET', body, signal, fileRespo
   if (!response.ok) {
     if (response.status === 401) window.dispatchEvent(new Event('auth:unauthorized'));
     throw new ApiError(
-      responseData?.message || (response.status === 413 ? 'Dosya yükleme sınırı aşıldı. Daha küçük bir PDF seçin.' :
+      responseData?.message || (response.status === 413 ? 'Dosya yükleme sınırı aşıldı. Daha küçük bir dosya seçin.' :
         response.status === 400 ? 'Lütfen aşağıdaki bilgileri kontrol edip tekrar deneyin.' :
         response.status === 403 ? 'Bu sayfaya erişim yetkiniz yok.' :
         response.status === 404 ? 'İstenen kayıt bulunamadı.' : 'İşlem tamamlanamadı. Lütfen tekrar deneyin.'),
@@ -51,3 +51,7 @@ export async function apiRequest(path, { method = 'GET', body, signal, fileRespo
   return responseData;
 }
 
+
+export function apiAssetUrl(path) {
+  return apiBaseAddress && path?.startsWith('/api/') ? `${apiBaseAddress}${path}` : null;
+}
