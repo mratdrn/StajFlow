@@ -24,6 +24,7 @@ builder.Services.AddScoped<IStudentAccountService, StudentAccountService>();
 builder.Services.AddScoped<ICompanyLogoService, CompanyLogoService>();
 builder.Services.AddScoped<ICompanyPostingService, CompanyPostingService>();
 builder.Services.AddScoped<IResumeService, ResumeService>();
+builder.Services.AddScoped<IPdfTextExtractionService, PdfTextExtractionService>();
 builder.Services.AddScoped<IStudentApplicationService, StudentApplicationService>();
 builder.Services.AddScoped<ICompanyApplicationService, CompanyApplicationService>();
 builder.Services.AddOptions<ResumeStorageOptions>()
