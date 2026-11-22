@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -168,6 +168,84 @@ namespace StajFlow.Api.Data.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.ApplicationEvaluation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("EvaluatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+
+                    b.Property<int>("InternshipApplicationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("InternshipPostingId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PostingAnalysisId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ResumeAnalysisId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ResumeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<decimal?>("Score")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("ScoringRuleVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("UnavailableReason")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostingAnalysisId", "InternshipPostingId");
+
+                    b.HasIndex("ResumeAnalysisId", "ResumeId");
+
+                    b.HasIndex("InternshipApplicationId", "ResumeId", "InternshipPostingId")
+                        .IsUnique();
+
+                    b.ToTable("ApplicationEvaluations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ApplicationEvaluations_Json", "ISJSON([ResultJson]) = 1");
+
+                            t.HasCheckConstraint("CK_ApplicationEvaluations_Score", "[Score] IS NULL OR [Score] BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("CK_ApplicationEvaluations_State", "([Status] = 'Calculated' AND [Score] IS NOT NULL AND [UnavailableReason] IS NULL AND [ResumeAnalysisId] IS NOT NULL AND [PostingAnalysisId] IS NOT NULL) OR ([Status] = 'NotCalculated' AND [Score] IS NULL AND [UnavailableReason] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_ApplicationEvaluations_UnavailableReason", "[UnavailableReason] IS NULL OR [UnavailableReason] IN ('AnalysisPending','AnalysisFailed','InsufficientData','NoMeasurableCriteria')");
+
+                            t.HasCheckConstraint("CK_ApplicationEvaluations_Versions", "LEN(LTRIM(RTRIM([SchemaVersion]))) > 0 AND LEN(LTRIM(RTRIM([ScoringRuleVersion]))) > 0");
+                        });
                 });
 
             modelBuilder.Entity("StajFlow.Api.Entities.ApplicationUser", b =>
@@ -499,6 +577,121 @@ namespace StajFlow.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("StajFlow.Api.Entities.LlmDailyUsage", b =>
+                {
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("BlockedUntil")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("InputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("OutputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("RequestCount")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("WindowRequestCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("WindowStartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Date");
+
+                    b.ToTable("LlmDailyUsage", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_LlmDailyUsage_Counts", "[RequestCount] >= 0 AND [WindowRequestCount] >= 0 AND [InputTokens] >= 0 AND [OutputTokens] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.PostingAnalysis", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+
+                    b.Property<string>("DataJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int>("InternshipPostingId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<byte[]>("SourceRowVersion")
+                        .IsRequired()
+                        .HasColumnType("varbinary(8)");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InternshipPostingId", "SourceRowVersion")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PostingAnalyses_ActiveSource")
+                        .HasFilter("[Status] IN ('Pending','Processing')");
+
+                    b.HasIndex("InternshipPostingId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("PostingAnalyses", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PostingAnalyses_ErrorCode", "[ErrorCode] IS NULL OR [ErrorCode] IN ('FileNotFound','InvalidPdf','EncryptedPdf','NoText','UnreadableText','FileTooLarge','ReadFailed','ProviderUnavailable','InvalidResponse','ProcessingFailed','Cancelled','AuthenticationFailed','ModelUnavailable','QuotaExceeded','InputTooLong','ConfigurationError','ContentBlocked')");
+
+                            t.HasCheckConstraint("CK_PostingAnalyses_Json", "[DataJson] IS NULL OR ISJSON([DataJson]) = 1");
+
+                            t.HasCheckConstraint("CK_PostingAnalyses_SourceRowVersion", "DATALENGTH([SourceRowVersion]) = 8");
+
+                            t.HasCheckConstraint("CK_PostingAnalyses_State", "([Status] = 'Pending' AND [StartedAt] IS NULL AND [CompletedAt] IS NULL AND [DataJson] IS NULL AND [ErrorCode] IS NULL) OR ([Status] = 'Processing' AND [StartedAt] IS NOT NULL AND [CompletedAt] IS NULL AND [DataJson] IS NULL AND [ErrorCode] IS NULL) OR ([Status] = 'Completed' AND [StartedAt] IS NOT NULL AND [CompletedAt] IS NOT NULL AND [DataJson] IS NOT NULL AND [ErrorCode] IS NULL) OR ([Status] = 'Failed' AND [StartedAt] IS NOT NULL AND [CompletedAt] IS NOT NULL AND [DataJson] IS NULL AND [ErrorCode] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_PostingAnalyses_Timestamps", "([StartedAt] IS NULL OR [StartedAt] >= [CreatedAt]) AND ([CompletedAt] IS NULL OR [CompletedAt] >= [StartedAt])");
+
+                            t.HasCheckConstraint("CK_PostingAnalyses_Version", "[Version] > 0 AND LEN(LTRIM(RTRIM([SchemaVersion]))) > 0");
+                        });
+                });
+
             modelBuilder.Entity("StajFlow.Api.Entities.Resume", b =>
                 {
                     b.Property<int>("Id")
@@ -550,6 +743,85 @@ namespace StajFlow.Api.Data.Migrations
                     b.ToTable("Resumes", null, t =>
                         {
                             t.HasCheckConstraint("CK_Resumes_FileSizeBytes", "[FileSizeBytes] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.ResumeAnalysis", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("SYSDATETIMEOFFSET()");
+
+                    b.Property<string>("DataJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int>("ResumeId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("SourceContentHash")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ResumeId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ResumeAnalyses_Active")
+                        .HasFilter("[Status] IN ('Pending','Processing')");
+
+                    b.HasIndex("ResumeId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("ResumeAnalyses", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ResumeAnalyses_ErrorCode", "[ErrorCode] IS NULL OR [ErrorCode] IN ('FileNotFound','InvalidPdf','EncryptedPdf','NoText','UnreadableText','FileTooLarge','ReadFailed','ProviderUnavailable','InvalidResponse','ProcessingFailed','Cancelled','AuthenticationFailed','ModelUnavailable','QuotaExceeded','InputTooLong','ConfigurationError','ContentBlocked')");
+
+                            t.HasCheckConstraint("CK_ResumeAnalyses_Json", "[DataJson] IS NULL OR ISJSON([DataJson]) = 1");
+
+                            t.HasCheckConstraint("CK_ResumeAnalyses_SourceContentHash", "[SourceContentHash] IS NULL OR LEN([SourceContentHash]) = 64");
+
+                            t.HasCheckConstraint("CK_ResumeAnalyses_State", "([Status] = 'Pending' AND [StartedAt] IS NULL AND [CompletedAt] IS NULL AND [DataJson] IS NULL AND [ErrorCode] IS NULL) OR ([Status] = 'Processing' AND [StartedAt] IS NOT NULL AND [CompletedAt] IS NULL AND [DataJson] IS NULL AND [ErrorCode] IS NULL) OR ([Status] = 'Completed' AND [StartedAt] IS NOT NULL AND [CompletedAt] IS NOT NULL AND [DataJson] IS NOT NULL AND [ErrorCode] IS NULL) OR ([Status] = 'Failed' AND [StartedAt] IS NOT NULL AND [CompletedAt] IS NOT NULL AND [DataJson] IS NULL AND [ErrorCode] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_ResumeAnalyses_Timestamps", "([StartedAt] IS NULL OR [StartedAt] >= [CreatedAt]) AND ([CompletedAt] IS NULL OR [CompletedAt] >= [StartedAt])");
+
+                            t.HasCheckConstraint("CK_ResumeAnalyses_Version", "[Version] > 0 AND LEN(LTRIM(RTRIM([SchemaVersion]))) > 0");
                         });
                 });
 
@@ -671,6 +943,34 @@ namespace StajFlow.Api.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("StajFlow.Api.Entities.ApplicationEvaluation", b =>
+                {
+                    b.HasOne("StajFlow.Api.Entities.PostingAnalysis", "PostingAnalysis")
+                        .WithMany("Evaluations")
+                        .HasForeignKey("PostingAnalysisId", "InternshipPostingId")
+                        .HasPrincipalKey("Id", "InternshipPostingId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("StajFlow.Api.Entities.ResumeAnalysis", "ResumeAnalysis")
+                        .WithMany("Evaluations")
+                        .HasForeignKey("ResumeAnalysisId", "ResumeId")
+                        .HasPrincipalKey("Id", "ResumeId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("StajFlow.Api.Entities.InternshipApplication", "InternshipApplication")
+                        .WithOne("Evaluation")
+                        .HasForeignKey("StajFlow.Api.Entities.ApplicationEvaluation", "InternshipApplicationId", "ResumeId", "InternshipPostingId")
+                        .HasPrincipalKey("StajFlow.Api.Entities.InternshipApplication", "Id", "ResumeId", "InternshipPostingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("InternshipApplication");
+
+                    b.Navigation("PostingAnalysis");
+
+                    b.Navigation("ResumeAnalysis");
+                });
+
             modelBuilder.Entity("StajFlow.Api.Entities.CompanyProfile", b =>
                 {
                     b.HasOne("StajFlow.Api.Entities.ApplicationUser", null)
@@ -729,6 +1029,17 @@ namespace StajFlow.Api.Data.Migrations
                     b.Navigation("InternshipPosting");
                 });
 
+            modelBuilder.Entity("StajFlow.Api.Entities.PostingAnalysis", b =>
+                {
+                    b.HasOne("StajFlow.Api.Entities.InternshipPosting", "InternshipPosting")
+                        .WithMany("Analyses")
+                        .HasForeignKey("InternshipPostingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("InternshipPosting");
+                });
+
             modelBuilder.Entity("StajFlow.Api.Entities.Resume", b =>
                 {
                     b.HasOne("StajFlow.Api.Entities.StudentProfile", "StudentProfile")
@@ -738,6 +1049,17 @@ namespace StajFlow.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("StudentProfile");
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.ResumeAnalysis", b =>
+                {
+                    b.HasOne("StajFlow.Api.Entities.Resume", "Resume")
+                        .WithMany("Analyses")
+                        .HasForeignKey("ResumeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Resume");
                 });
 
             modelBuilder.Entity("StajFlow.Api.Entities.StudentProfile", b =>
@@ -760,16 +1082,35 @@ namespace StajFlow.Api.Data.Migrations
                     b.Navigation("InternshipPostings");
                 });
 
+            modelBuilder.Entity("StajFlow.Api.Entities.InternshipApplication", b =>
+                {
+                    b.Navigation("Evaluation");
+                });
+
             modelBuilder.Entity("StajFlow.Api.Entities.InternshipPosting", b =>
                 {
+                    b.Navigation("Analyses");
+
                     b.Navigation("Applications");
 
                     b.Navigation("Requirements");
                 });
 
+            modelBuilder.Entity("StajFlow.Api.Entities.PostingAnalysis", b =>
+                {
+                    b.Navigation("Evaluations");
+                });
+
             modelBuilder.Entity("StajFlow.Api.Entities.Resume", b =>
                 {
+                    b.Navigation("Analyses");
+
                     b.Navigation("Applications");
+                });
+
+            modelBuilder.Entity("StajFlow.Api.Entities.ResumeAnalysis", b =>
+                {
+                    b.Navigation("Evaluations");
                 });
 
             modelBuilder.Entity("StajFlow.Api.Entities.StudentProfile", b =>

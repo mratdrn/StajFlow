@@ -34,5 +34,6 @@ public class InternshipPosting
     public CompanyProfile CompanyProfile { get; set; } = null!;
     public ICollection<InternshipRequirement> Requirements { get; set; } = new List<InternshipRequirement>();
     public ICollection<InternshipApplication> Applications { get; set; } = new List<InternshipApplication>();
+    public ICollection<PostingAnalysis> Analyses { get; set; } = new List<PostingAnalysis>();
 }
 

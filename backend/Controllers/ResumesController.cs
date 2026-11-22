@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using StajFlow.Api.Configurations;
 using StajFlow.Api.DTOs;
+using StajFlow.Api.DTOs.Analysis;
 using StajFlow.Api.Entities;
 using StajFlow.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -15,8 +16,25 @@ namespace StajFlow.Api.Controllers;
 [RequireHttps]
 [Authorize(Roles = UserRoles.Student)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public class ResumesController(IResumeService service, IOptions<ResumeStorageOptions> options) : ControllerBase
+public class ResumesController(IResumeService service, IResumeAnalysisService analysisService, IOptions<ResumeStorageOptions> options) : ControllerBase
 {
+    [HttpGet("{id:int}/analysis")]
+    public async Task<ActionResult<ResumeAnalysisDto>> Analysis(int id, CancellationToken cancellationToken)
+    {
+        var result = await analysisService.GetAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, id, cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("{id:int}/analysis")]
+    public async Task<IActionResult> RequestAnalysis(int id, CancellationToken cancellationToken)
+    {
+        var result = await analysisService.RequestAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, id, cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (result.Analysis is null) return Conflict(new { message = "Analiz durumu değişti. Durumu yenileyip tekrar deneyin." });
+        return result.Analysis.Status is "Pending" or "Processing"
+            ? AcceptedAtAction(nameof(Analysis), new { id }, result.Analysis) : Ok(result.Analysis);
+    }
+
     [HttpGet]
     public async Task<ActionResult<ResumeListDto>> List(CancellationToken cancellationToken) =>
         Ok(new ResumeListDto(options.Value.MaxFileSizeBytes,

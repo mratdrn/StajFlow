@@ -13,6 +13,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<InternshipRequirement> InternshipRequirements => Set<InternshipRequirement>();
     public DbSet<InternshipApplication> Applications => Set<InternshipApplication>();
     public DbSet<Resume> Resumes => Set<Resume>();
+    public DbSet<ResumeAnalysis> ResumeAnalyses => Set<ResumeAnalysis>();
+    public DbSet<PostingAnalysis> PostingAnalyses => Set<PostingAnalysis>();
+    public DbSet<ApplicationEvaluation> ApplicationEvaluations => Set<ApplicationEvaluation>();
+    public DbSet<LlmDailyUsage> LlmDailyUsage => Set<LlmDailyUsage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -64,6 +64,7 @@ public class ResumeService(
             StudentProfileId = studentId.Value, OriginalFileName = name, StorageKey = key,
             ContentType = "application/pdf", FileSizeBytes = content.LongLength
         };
+        resume.Analyses.Add(new ResumeAnalysis());
         var fileCreated = false;
         try
         {

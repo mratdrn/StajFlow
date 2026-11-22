@@ -27,5 +27,6 @@ public class InternshipApplication
     public StudentProfile StudentProfile { get; set; } = null!;
     public InternshipPosting InternshipPosting { get; set; } = null!;
     public Resume Resume { get; set; } = null!;
+    public ApplicationEvaluation? Evaluation { get; set; }
 }
 

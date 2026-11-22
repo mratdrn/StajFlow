@@ -21,5 +21,6 @@ public class Resume
     public DateTimeOffset UploadedAt { get; set; } = DateTimeOffset.UtcNow;
     public StudentProfile StudentProfile { get; set; } = null!;
     public ICollection<InternshipApplication> Applications { get; set; } = new List<InternshipApplication>();
+    public ICollection<ResumeAnalysis> Analyses { get; set; } = new List<ResumeAnalysis>();
 }
 

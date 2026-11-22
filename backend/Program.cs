@@ -25,6 +25,31 @@ builder.Services.AddScoped<ICompanyLogoService, CompanyLogoService>();
 builder.Services.AddScoped<ICompanyPostingService, CompanyPostingService>();
 builder.Services.AddScoped<IResumeService, ResumeService>();
 builder.Services.AddScoped<IPdfTextExtractionService, PdfTextExtractionService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<GeminiApiKeyProvider>();
+builder.Services.AddSingleton<ILlmQuotaService, LlmQuotaService>();
+builder.Services.AddSingleton<ResumeTextRedactionService>();
+builder.Services.AddScoped<ResumeAnalysisService>();
+builder.Services.AddScoped<IResumeAnalysisService>(services => services.GetRequiredService<ResumeAnalysisService>());
+builder.Services.AddHostedService<ResumeAnalysisWorker>();
+builder.Services.AddOptions<GeminiOptions>().BindConfiguration(GeminiOptions.SectionName)
+    .Validate(settings => Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out var uri) && uri.Scheme == "https" &&
+        string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Query) && string.IsNullOrEmpty(uri.Fragment) &&
+        settings.BaseUrl.EndsWith('/') && uri.Host.Equals("generativelanguage.googleapis.com", StringComparison.OrdinalIgnoreCase),
+        "Gemini adresi geçerli bir Google HTTPS API adresi olmalıdır.")
+    .Validate(settings => !string.IsNullOrWhiteSpace(settings.Model) && settings.Model.Length <= 128 &&
+        settings.Model.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '.'), "Gemini model kimliği geçersiz.")
+    .Validate(settings => settings.DailyRequestLimit > 0 && settings.RequestsPerMinute > 0 &&
+        settings.MaxInputCharacters > 0 && settings.MaxOutputTokens > 0 && settings.MaxResponseBytes > 0 &&
+        settings.RequestTimeoutSeconds > 0 && settings.RetryBaseDelaySeconds >= 0 && settings.MaxRetryDelaySeconds > 0,
+        "Gemini kullanım sınırları ve zaman aşımı ayarları geçerli olmalıdır.")
+    .ValidateOnStart();
+builder.Services.AddHttpClient<ILlmService, GeminiService>(client => client.Timeout = Timeout.InfiniteTimeSpan)
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    {
+        AllowAutoRedirect = false,
+        AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+    }).RemoveAllLoggers();
 builder.Services.AddScoped<IStudentApplicationService, StudentApplicationService>();
 builder.Services.AddScoped<ICompanyApplicationService, CompanyApplicationService>();
 builder.Services.AddOptions<ResumeStorageOptions>()
