@@ -34,6 +34,14 @@ public sealed class PostingCriterionData
 
     [JsonPropertyName("technologies")]
     public List<string> Technologies { get; init; } = [];
+    [JsonPropertyName("anyTechnology")]
+    public bool AnyTechnology { get; init; }
+    [JsonPropertyName("projectTopic")]
+    public string? ProjectTopic { get; init; }
+    [JsonPropertyName("experienceType")]
+    public ExperienceType? ExperienceType { get; init; }
+    [JsonPropertyName("experienceRole")]
+    public string? ExperienceRole { get; init; }
 
     [JsonPropertyName("minimumDurationMonths")]
     public decimal? MinimumDurationMonths { get; init; }
@@ -46,6 +54,8 @@ public sealed class PostingCriterionData
 
     [JsonPropertyName("minimumStudyYear")]
     public int? MinimumStudyYear { get; init; }
+    [JsonPropertyName("maximumStudyYear")]
+    public int? MaximumStudyYear { get; init; }
 
     [JsonPropertyName("evidence")]
     public EvidenceData? Evidence { get; init; }

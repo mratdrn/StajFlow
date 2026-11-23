@@ -1,9 +1,5 @@
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Schema;
-using System.Text.Json.Serialization;
-using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
 using StajFlow.Api.DTOs.Analysis;
 using StajFlow.Api.Entities;
@@ -31,78 +27,22 @@ public static class ResumeAnalysisContract
         Yalnız şemaya uygun JSON üret; puan, ilan kriteri veya Markdown üretme.
         """;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
-        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-        RespectNullableAnnotations = true,
-        MaxDepth = 32,
-        Converters = { new JsonStringEnumConverter(allowIntegerValues: false) }
-    };
-
-    public static JsonNode CreateSchema()
-    {
-        var schema = JsonOptions.GetJsonSchemaAsNode(typeof(ResumeAnalysisData), new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = true });
-        CompleteSchema(schema);
-        return schema;
-    }
-
-    private static void CompleteSchema(JsonNode? node)
-    {
-        if (node is JsonObject obj)
-        {
-            if (obj["properties"] is JsonObject properties)
-            {
-                obj["additionalProperties"] = false;
-                obj["required"] = new JsonArray(properties.Select(property => (JsonNode?)JsonValue.Create(property.Key)).ToArray());
-                if (properties["sourceQuote"] is JsonObject quote) quote["maxLength"] = 400;
-            }
-            foreach (var child in obj.ToArray()) CompleteSchema(child.Value);
-        }
-        else if (node is JsonArray array)
-            foreach (var child in array) CompleteSchema(child);
-    }
+    public static JsonNode CreateSchema() => AnalysisJson.CreateSchema<ResumeAnalysisData>();
 
     public static string? Validate(string json, string source, Func<string, string> removeIdentifiers)
     {
         try
         {
-            using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 32 });
-            if (!HasShape(document.RootElement, typeof(ResumeAnalysisData), new NullabilityInfoContext())) return null;
-            var data = JsonSerializer.Deserialize<ResumeAnalysisData>(json, JsonOptions);
+            var data = AnalysisJson.Read<ResumeAnalysisData>(json);
             if (data is null || !HasGroundedContent(data, source)) return null;
-            var node = JsonSerializer.SerializeToNode(data, JsonOptions)!;
+            var node = JsonSerializer.SerializeToNode(data, AnalysisJson.JsonOptions)!;
             SanitizeValues(node, removeIdentifiers);
-            return node.ToJsonString(JsonOptions);
+            return node.ToJsonString(AnalysisJson.JsonOptions);
         }
         catch (Exception error) when (error is JsonException or NotSupportedException or ArgumentException or OverflowException)
         {
             return null;
         }
-    }
-
-    private static bool HasShape(JsonElement element, Type type, NullabilityInfoContext nullability)
-    {
-        var nullable = Nullable.GetUnderlyingType(type);
-        if (nullable is not null) return element.ValueKind == JsonValueKind.Null || HasShape(element, nullable, nullability);
-        if (type == typeof(string)) return element.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(element.GetString());
-        if (type == typeof(int)) return element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out _);
-        if (type == typeof(decimal)) return element.ValueKind == JsonValueKind.Number && element.TryGetDecimal(out _);
-        if (type.IsEnum) return element.ValueKind == JsonValueKind.String && Enum.TryParse(type, element.GetString(), false, out var value) && Enum.IsDefined(type, value!);
-        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
-            return element.ValueKind == JsonValueKind.Array && element.EnumerateArray().All(item => HasShape(item, type.GenericTypeArguments[0], nullability));
-        if (element.ValueKind != JsonValueKind.Object) return false;
-        var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public);
-        var values = element.EnumerateObject().ToArray();
-        if (values.Length != properties.Length || values.Select(value => value.Name).Distinct(StringComparer.Ordinal).Count() != values.Length) return false;
-        foreach (var property in properties)
-        {
-            var name = property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? property.Name;
-            if (!element.TryGetProperty(name, out var child)) return false;
-            if (child.ValueKind == JsonValueKind.Null && !property.PropertyType.IsValueType && nullability.Create(property).ReadState == NullabilityState.Nullable) continue;
-            if (!HasShape(child, property.PropertyType, nullability)) return false;
-        }
-        return true;
     }
 
     private static bool HasGroundedContent(ResumeAnalysisData data, string source)

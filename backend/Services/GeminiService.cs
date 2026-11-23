@@ -47,7 +47,8 @@ public sealed class GeminiService(HttpClient client, GeminiApiKeyProvider keyPro
                 message.Content = JsonContent.Create(new
                 {
                     systemInstruction = new { parts = new[] { new { text = request.Instruction } } },
-                    contents = new[] { new { role = "user", parts = new[] { new { text = JsonSerializer.Serialize(new { resumeText = request.Text }) } } } },
+                    contents = new[] { new { role = "user", parts = new[] { new { text = JsonSerializer.Serialize(
+                        new Dictionary<string, string> { [request.TextPropertyName] = request.Text }) } } } },
                     generationConfig = new { responseMimeType = "application/json", responseJsonSchema = request.Schema, maxOutputTokens = settings.MaxOutputTokens }
                 });
                 using var response = await SendAsync(message, timeout.Token);

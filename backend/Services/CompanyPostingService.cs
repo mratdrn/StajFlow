@@ -3,11 +3,12 @@ using StajFlow.Api.DTOs;
 using StajFlow.Api.DTOs.PostingManagement;
 using StajFlow.Api.Entities;
 using StajFlow.Api.Services.Interfaces;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace StajFlow.Api.Services;
 
-public class CompanyPostingService(ApplicationDbContext context) : ICompanyPostingService
+public class CompanyPostingService(ApplicationDbContext context, PostingAnalysisService analyses) : ICompanyPostingService
 {
     public async Task<IReadOnlyList<InternshipPostingListDto>> ListAsync(string userId, bool? archived, CancellationToken cancellationToken)
     {
@@ -45,7 +46,10 @@ public class CompanyPostingService(ApplicationDbContext context) : ICompanyPosti
         foreach (var requirement in request.Requirements)
             posting.Requirements.Add(new InternshipRequirement { Description = requirement.Description.Trim(), Type = Enum.Parse<RequirementType>(requirement.Type) });
         context.InternshipPostings.Add(posting);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+        await QueuePublishedAnalysisAsync(posting, retryFailed: false, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return new(CreateDto(posting));
     }
 
@@ -66,6 +70,7 @@ public class CompanyPostingService(ApplicationDbContext context) : ICompanyPosti
         if (request.Requirements.Any(requirement => requirement.Id.HasValue && !existing.ContainsKey(requirement.Id.Value)))
             return new(null, PostingManagementError.InvalidRequirement);
 
+        var newlyPublished = posting.Status != PostingStatus.Published && request.Status == nameof(PostingStatus.Published);
         ApplyContent(posting, request);
         var retainedIds = request.Requirements.Where(requirement => requirement.Id.HasValue).Select(requirement => requirement.Id!.Value).ToHashSet();
         foreach (var silinen in posting.Requirements.Where(requirement => !retainedIds.Contains(requirement.Id)).ToList())
@@ -86,13 +91,31 @@ public class CompanyPostingService(ApplicationDbContext context) : ICompanyPosti
         context.Entry(posting).Property(posting => posting.RowVersion).OriginalValue = version;
         try
         {
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
+            await QueuePublishedAnalysisAsync(posting, newlyPublished, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             return new(CreateDto(posting));
         }
         catch (DbUpdateConcurrencyException)
         {
             return new(null, PostingManagementError.VersionConflict);
         }
+        catch (DbUpdateException error) when (error.InnerException is SqlException { Number: 2601 or 2627 or 1205 })
+        {
+            return new(null, PostingManagementError.VersionConflict);
+        }
+        catch (SqlException error) when (error.Number == 1205)
+        {
+            return new(null, PostingManagementError.VersionConflict);
+        }
+    }
+
+    private async Task QueuePublishedAnalysisAsync(InternshipPosting posting, bool retryFailed, CancellationToken cancellationToken)
+    {
+        if (posting.Status != PostingStatus.Published || posting.ApplicationDeadline <= DateTimeOffset.UtcNow) return;
+        await analyses.QueueAsync(posting, retryFailed, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     private static void ApplyContent(InternshipPosting posting, PostingContentRequest request)

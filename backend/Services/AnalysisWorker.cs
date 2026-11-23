@@ -7,8 +7,8 @@ using StajFlow.Api.Entities;
 
 namespace StajFlow.Api.Services;
 
-public sealed class ResumeAnalysisWorker(IServiceScopeFactory scopeFactory, IOptions<GeminiOptions> options,
-    TimeProvider clock, ILogger<ResumeAnalysisWorker> logger) : BackgroundService
+public sealed class AnalysisWorker(IServiceScopeFactory scopeFactory, IOptions<GeminiOptions> options,
+    TimeProvider clock, ILogger<AnalysisWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -21,7 +21,7 @@ public sealed class ResumeAnalysisWorker(IServiceScopeFactory scopeFactory, IOpt
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception error) when (error is not OutOfMemoryException)
             {
-                logger.LogWarning("CV analiz işleyicisi şu anda çalışamıyor; yeniden denenecek.");
+                logger.LogWarning("Analiz işleyicisi şu anda çalışamıyor; yeniden denenecek.");
             }
             try { await Task.Delay(TimeSpan.FromSeconds(5), clock, stoppingToken); }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
@@ -47,12 +47,23 @@ public sealed class ResumeAnalysisWorker(IServiceScopeFactory scopeFactory, IOpt
                     .SetProperty(record => record.DataJson, (string?)null)
                     .SetProperty(record => record.ErrorCode, (AnalysisErrorCode?)AnalysisErrorCode.Cancelled)
                     .SetProperty(record => record.CompletedAt, now), cancellationToken);
+            await database.PostingAnalyses.Where(record => record.Status == AnalysisStatus.Processing)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(record => record.Status, AnalysisStatus.Failed)
+                    .SetProperty(record => record.DataJson, (string?)null)
+                    .SetProperty(record => record.ErrorCode, (AnalysisErrorCode?)AnalysisErrorCode.Cancelled)
+                    .SetProperty(record => record.CompletedAt, record => record.StartedAt > now ? record.StartedAt : now), cancellationToken);
+            var preferPosting = false;
             while (!cancellationToken.IsCancellationRequested && connection.State == ConnectionState.Open)
             {
                 command.CommandText = "SELECT APPLOCK_MODE('public', 'StajFlow.ResumeAnalysisWorker', 'Session');";
                 if (!string.Equals(Convert.ToString(await command.ExecuteScalarAsync(cancellationToken)), "Exclusive", StringComparison.Ordinal)) return;
                 await using var scope = scopeFactory.CreateAsyncScope();
-                var processed = await scope.ServiceProvider.GetRequiredService<ResumeAnalysisService>().ProcessNextAsync(cancellationToken);
+                var resumes = scope.ServiceProvider.GetRequiredService<ResumeAnalysisService>();
+                var postings = scope.ServiceProvider.GetRequiredService<PostingAnalysisService>();
+                var processed = preferPosting
+                    ? await postings.ProcessNextAsync(cancellationToken) || await resumes.ProcessNextAsync(cancellationToken)
+                    : await resumes.ProcessNextAsync(cancellationToken) || await postings.ProcessNextAsync(cancellationToken);
+                preferPosting = !preferPosting;
                 if (!processed) await Task.Delay(TimeSpan.FromSeconds(3), clock, cancellationToken);
             }
         }

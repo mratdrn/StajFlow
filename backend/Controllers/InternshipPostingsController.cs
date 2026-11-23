@@ -1,13 +1,18 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using StajFlow.Api.DTOs;
+using StajFlow.Api.DTOs.Analysis;
+using StajFlow.Api.Entities;
+using StajFlow.Api.Services;
 using StajFlow.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace StajFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/internship-postings")]
-public class InternshipPostingsController(IInternshipPostingService service) : ControllerBase
+public class InternshipPostingsController(IInternshipPostingService service, CompatibilityService compatibility) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<InternshipPostingListDto>>(StatusCodes.Status200OK)]
@@ -34,6 +39,17 @@ public class InternshipPostingsController(IInternshipPostingService service) : C
         }
 
         return Ok(posting);
+    }
+
+    [HttpGet("{id:int}/compatibility")]
+    [Authorize(Roles = UserRoles.Student)]
+    [RequireHttps]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<ActionResult<CompatibilityDto>> GetCompatibility(int id,
+        [FromQuery, Range(1, int.MaxValue)] int? resumeId, CancellationToken cancellationToken)
+    {
+        var result = await compatibility.GetAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, id, resumeId, cancellationToken);
+        return result is null ? NotFound() : Ok(result);
     }
 }
 

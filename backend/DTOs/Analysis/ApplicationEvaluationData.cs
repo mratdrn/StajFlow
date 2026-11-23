@@ -40,6 +40,8 @@ public sealed class CriterionEvaluationData
 
     [JsonPropertyName("matchStatus")]
     public CriterionMatchStatus MatchStatus { get; init; } = CriterionMatchStatus.NoEvidence;
+    [JsonPropertyName("postingEvidence")]
+    public EvidenceData? PostingEvidence { get; init; }
 
     [JsonPropertyName("evidence")]
     public List<EvidenceData> Evidence { get; init; } = [];

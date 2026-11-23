@@ -7,6 +7,7 @@ public class PostingAnalysis
     public int Version { get; set; } = 1;
     public string SchemaVersion { get; set; } = "1";
     public required byte[] SourceRowVersion { get; set; }
+    public string? SourceContentHash { get; set; }
     public AnalysisStatus Status { get; set; } = AnalysisStatus.Pending;
     public string? DataJson { get; set; }
     public AnalysisErrorCode? ErrorCode { get; set; }

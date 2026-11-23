@@ -9,7 +9,8 @@ public interface ILlmService
     Task<LlmJsonResult> GenerateJsonAsync(LlmJsonRequest request, CancellationToken cancellationToken);
 }
 
-public sealed class LlmJsonRequest(string instruction, string text, JsonNode schema, Func<string, string?> validate)
+public sealed class LlmJsonRequest(string instruction, string text, JsonNode schema, Func<string, string?> validate,
+    string textPropertyName = "resumeText")
 {
     [JsonIgnore]
     public string Instruction { get; } = instruction;
@@ -19,6 +20,8 @@ public sealed class LlmJsonRequest(string instruction, string text, JsonNode sch
     public JsonNode Schema { get; } = schema;
     [JsonIgnore]
     public Func<string, string?> Validate { get; } = validate;
+    [JsonIgnore]
+    public string TextPropertyName { get; } = textPropertyName;
 }
 
 public sealed class LlmJsonResult

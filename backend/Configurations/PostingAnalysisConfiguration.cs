@@ -35,6 +35,8 @@ public class PostingAnalysisConfiguration : IEntityTypeConfiguration<PostingAnal
             .Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
         builder.Property(record => record.SourceRowVersion).HasColumnType("varbinary(8)").IsRequired()
             .Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
+        builder.Property(record => record.SourceContentHash).HasMaxLength(64).IsUnicode(false)
+            .Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Throw);
         builder.Property(record => record.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(record => record.ErrorCode).HasConversion<string>().HasMaxLength(32);
         builder.Property(record => record.DataJson).HasColumnType("nvarchar(max)");

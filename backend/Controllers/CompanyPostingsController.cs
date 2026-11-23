@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using StajFlow.Api.DTOs;
+using StajFlow.Api.DTOs.Analysis;
 using StajFlow.Api.DTOs.PostingManagement;
 using StajFlow.Api.Entities;
 using StajFlow.Api.Services;
@@ -14,7 +15,7 @@ namespace StajFlow.Api.Controllers;
 [RequireHttps]
 [Authorize(Roles = UserRoles.Company)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public class CompanyPostingsController(ICompanyPostingService service) : ControllerBase
+public class CompanyPostingsController(ICompanyPostingService service, PostingAnalysisService analyses) : ControllerBase
 {
     private string IdentityUserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
@@ -42,6 +43,26 @@ public class CompanyPostingsController(ICompanyPostingService service) : Control
     {
         var result = await service.UpdateAsync(IdentityUserId, id, request, cancellationToken);
         return result.Error.HasValue ? ReturnError(result.Error.Value) : Ok(result.Posting);
+    }
+
+    [HttpGet("{id:int}/analysis")]
+    public async Task<ActionResult<PostingAnalysisDto>> GetAnalysis(int id, CancellationToken cancellationToken)
+    {
+        var result = await analyses.GetAsync(IdentityUserId, id, cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("{id:int}/analysis")]
+    public async Task<IActionResult> RequestAnalysis(int id, CancellationToken cancellationToken)
+    {
+        var result = await analyses.RequestAsync(IdentityUserId, id, cancellationToken);
+        if (result.Error == PostingAnalysisRequestError.NotFound) return NotFound();
+        if (result.Error == PostingAnalysisRequestError.NotPublished)
+            return Conflict(new { message = "Yeniden analiz için ilan yayında ve başvuruya açık olmalıdır." });
+        if (result.Analysis is not { } analysis)
+            return Conflict(new { message = "İlan analizi değişti. Durumu yenileyip tekrar deneyin." });
+        return analysis.Status is AnalysisStatus.Pending or AnalysisStatus.Processing
+            ? AcceptedAtAction(nameof(GetAnalysis), new { id }, analysis) : Ok(analysis);
     }
 
     private IActionResult ReturnError(PostingManagementError error) => error switch

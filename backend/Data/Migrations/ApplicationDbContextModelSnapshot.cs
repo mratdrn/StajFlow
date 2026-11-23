@@ -651,6 +651,11 @@ namespace StajFlow.Api.Data.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<string>("SourceContentHash")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<byte[]>("SourceRowVersion")
                         .IsRequired()
                         .HasColumnType("varbinary(8)");

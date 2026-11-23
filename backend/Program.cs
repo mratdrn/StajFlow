@@ -31,7 +31,10 @@ builder.Services.AddSingleton<ILlmQuotaService, LlmQuotaService>();
 builder.Services.AddSingleton<ResumeTextRedactionService>();
 builder.Services.AddScoped<ResumeAnalysisService>();
 builder.Services.AddScoped<IResumeAnalysisService>(services => services.GetRequiredService<ResumeAnalysisService>());
-builder.Services.AddHostedService<ResumeAnalysisWorker>();
+builder.Services.AddScoped<PostingAnalysisService>();
+builder.Services.AddSingleton<CompatibilityScorer>();
+builder.Services.AddScoped<CompatibilityService>();
+builder.Services.AddHostedService<AnalysisWorker>();
 builder.Services.AddOptions<GeminiOptions>().BindConfiguration(GeminiOptions.SectionName)
     .Validate(settings => Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out var uri) && uri.Scheme == "https" &&
         string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Query) && string.IsNullOrEmpty(uri.Fragment) &&
