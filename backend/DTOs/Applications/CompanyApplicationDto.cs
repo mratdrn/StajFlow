@@ -15,4 +15,6 @@ public record CompanyApplicationDto(
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("appliedAt")] DateTimeOffset AppliedAt,
     [property: JsonPropertyName("statusUpdatedAt")] DateTimeOffset? StatusUpdatedAt,
-    [property: JsonPropertyName("rowVersion")] string RowVersion);
+    [property: JsonPropertyName("rowVersion")] string RowVersion,
+    [property: JsonPropertyName("resumeId")] int ResumeId = 0,
+    [property: JsonPropertyName("evaluation")] ApplicationEvaluationDto? Evaluation = null);

@@ -21,7 +21,8 @@ public class StudentApplicationsController(IStudentApplicationService service) :
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery, Range(1, int.MaxValue, ErrorMessage = "Sayfa numarası en az 1 olmalıdır.")] int? page,
-        [FromQuery, AllowedValues(null, "Submitted", "UnderReview", "Accepted", "Rejected", ErrorMessage = "Başvuru durumu geçersiz.")] string? status,
+        [FromQuery, AllowedValues(null, "Submitted", "UnderReview", "Shortlisted", "Accepted", "Rejected", "Withdrawn",
+            ErrorMessage = "Başvuru durumu geçersiz.")] string? status,
         CancellationToken cancellationToken)
     {
         if (page.HasValue || status is not null)
@@ -66,6 +67,7 @@ public class StudentApplicationsController(IStudentApplicationService service) :
             ApplicationCreationError.InvalidResume => BadRequest(new { message = "Kendi hesabınıza ait PDF formatında bir özgeçmiş seçin." }),
             ApplicationCreationError.AlreadyApplied => Conflict(new { message = "Bu ilana zaten başvurdunuz. Başvurularım sayfasından takip edebilirsiniz." }),
             ApplicationCreationError.DeadlinePassed => Conflict(new { message = "Bu ilanın son başvuru tarihi geçti." }),
+            ApplicationCreationError.VersionConflict => Conflict(new { message = "Başvuru bilgileri değişti. Sayfayı yenileyip tekrar deneyin." }),
             _ => CreatedAtAction(nameof(Get), new { id = result.Application!.Id }, result.Application)
         };
     }

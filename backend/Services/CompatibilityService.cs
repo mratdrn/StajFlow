@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using StajFlow.Api.Data;
 using StajFlow.Api.DTOs.Analysis;
@@ -10,33 +11,81 @@ public sealed class CompatibilityService(ApplicationDbContext context, Compatibi
     public async Task<CompatibilityDto?> GetAsync(string userId, int postingId, int? resumeId, CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow();
-        var posting = await context.InternshipPostings.AsNoTracking().Where(item => item.Id == postingId &&
-                item.Status == PostingStatus.Published && (item.ApplicationDeadline == null || item.ApplicationDeadline > now))
-            .Include(item => item.Requirements).Include(item => item.Analyses.OrderByDescending(analysis => analysis.Version).Take(1))
-            .AsSingleQuery().SingleOrDefaultAsync(cancellationToken);
+        var posting = await WithCriterionSource(context.InternshipPostings.AsNoTracking())
+            .SingleOrDefaultAsync(item => item.Id == postingId && item.Status == PostingStatus.Published &&
+                (item.ApplicationDeadline == null || item.ApplicationDeadline > now), cancellationToken);
         if (posting is null) return null;
 
         var resumes = context.Resumes.AsNoTracking().Where(item => item.StudentProfile.IdentityUserId == userId);
         if (resumeId.HasValue) resumes = resumes.Where(item => item.Id == resumeId.Value);
-        var resume = await resumes.OrderByDescending(item => item.UploadedAt).ThenByDescending(item => item.Id)
-            .Include(item => item.Analyses.OrderByDescending(analysis => analysis.Version).Take(1))
-            .AsSingleQuery().FirstOrDefaultAsync(cancellationToken);
+        var resume = await WithResumeSource(resumes).OrderByDescending(item => item.UploadedAt)
+            .ThenByDescending(item => item.Id).FirstOrDefaultAsync(cancellationToken);
         if (resumeId.HasValue && resume is null) return null;
 
-        var latestPosting = posting.Analyses.SingleOrDefault();
-        if (!PostingAnalysisService.IsCurrent(latestPosting, PostingAnalysisSource.From(posting).Fingerprint())) latestPosting = null;
-        var latestResume = resume?.Analyses.SingleOrDefault();
-        var evaluation = Evaluate(latestResume, latestPosting);
+        var evaluation = EvaluateSources(resume, posting);
 
         return new(postingId, resume?.Id, CompatibilityScorer.RuleVersion,
             evaluation.Score.HasValue ? EvaluationStatus.Calculated : EvaluationStatus.NotCalculated,
             evaluation.Score, evaluation.UnavailableReason, UnavailableMessage(evaluation.UnavailableReason),
-            latestResume is null ? null : new(latestResume.Id, latestResume.Version, latestResume.SchemaVersion, latestResume.Status, latestResume.ErrorCode),
-            latestPosting is null ? null : new(latestPosting.Id, latestPosting.Version, latestPosting.SchemaVersion, latestPosting.Status,
-                latestPosting.ErrorCode, Convert.ToBase64String(latestPosting.SourceRowVersion)),
+            evaluation.Data.ResumeAnalysis, evaluation.Data.PostingAnalysis,
             evaluation.Data.Criteria.Where(item => item.Type == RequirementType.Required).ToList(),
             evaluation.Data.Criteria.Where(item => item.Type == RequirementType.Preferred).ToList(),
             evaluation.Data.MandatoryWarnings, evaluation.Data.SocialIndicators);
+    }
+
+    internal static IQueryable<InternshipPosting> WithCriterionSource(IQueryable<InternshipPosting> query) => query
+        .Include(posting => posting.Requirements)
+        .Include(posting => posting.Analyses.OrderByDescending(analysis => analysis.Version).Take(1)).AsSingleQuery();
+
+    internal static IQueryable<Resume> WithResumeSource(IQueryable<Resume> query) => query
+        .Include(resume => resume.Analyses.OrderByDescending(analysis => analysis.Version).Take(1)).AsSingleQuery();
+
+    internal ApplicationEvaluation CreateSnapshot(Resume resume, InternshipPosting posting, DateTimeOffset evaluatedAt)
+    {
+        var evaluation = EvaluateSources(resume, posting);
+        var required = evaluation.Data.Criteria.Where(item => item.Type == RequirementType.Required).ToList();
+        var requiredStatus = evaluation.UnavailableReason switch
+        {
+            EvaluationUnavailableReason.NoMeasurableCriteria => RequiredCriteriaStatus.NoRequiredCriteria,
+            not null => RequiredCriteriaStatus.Unavailable,
+            _ when required.Count == 0 => RequiredCriteriaStatus.NoRequiredCriteria,
+            _ when required.Any(item => item.MatchStatus == CriterionMatchStatus.NoEvidence) => RequiredCriteriaStatus.MissingEvidence,
+            _ => RequiredCriteriaStatus.AllMatched
+        };
+        return new()
+        {
+            ResumeId = resume.Id,
+            InternshipPostingId = posting.Id,
+            ResumeAnalysisId = evaluation.Data.ResumeAnalysis?.Id,
+            PostingAnalysisId = evaluation.Data.PostingAnalysis?.Id,
+            ScoringRuleVersion = CompatibilityScorer.RuleVersion,
+            Status = evaluation.Score.HasValue ? EvaluationStatus.Calculated : EvaluationStatus.NotCalculated,
+            Score = evaluation.Score,
+            UnavailableReason = evaluation.UnavailableReason,
+            RequiredCriteriaStatus = requiredStatus,
+            ResultJson = JsonSerializer.Serialize(evaluation.Data, JsonSerializerOptions.Web),
+            EvaluatedAt = evaluatedAt
+        };
+    }
+
+    private CompatibilityScoringResult EvaluateSources(Resume? resume, InternshipPosting posting)
+    {
+        var postingAnalysis = posting.Analyses.SingleOrDefault();
+        if (!PostingAnalysisService.IsCurrent(postingAnalysis, PostingAnalysisSource.From(posting).Fingerprint()))
+            postingAnalysis = null;
+        var resumeAnalysis = resume?.Analyses.SingleOrDefault();
+        var evaluation = Evaluate(resumeAnalysis, postingAnalysis);
+        return evaluation with
+        {
+            Data = evaluation.Data with
+            {
+                ResumeAnalysis = resumeAnalysis is null ? null : new(resumeAnalysis.Id, resumeAnalysis.Version,
+                    resumeAnalysis.SchemaVersion, resumeAnalysis.Status, resumeAnalysis.ErrorCode),
+                PostingAnalysis = postingAnalysis is null ? null : new(postingAnalysis.Id, postingAnalysis.Version,
+                    postingAnalysis.SchemaVersion, postingAnalysis.Status, postingAnalysis.ErrorCode,
+                    Convert.ToBase64String(postingAnalysis.SourceRowVersion))
+            }
+        };
     }
 
     private CompatibilityScoringResult Evaluate(ResumeAnalysis? resume, PostingAnalysis? posting)

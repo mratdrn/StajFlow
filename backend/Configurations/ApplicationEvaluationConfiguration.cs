@@ -20,6 +20,8 @@ public class ApplicationEvaluationConfiguration : IEntityTypeConfiguration<Appli
                 "([Status] = 'NotCalculated' AND [Score] IS NULL AND [UnavailableReason] IS NOT NULL)");
             table.HasCheckConstraint("CK_ApplicationEvaluations_UnavailableReason",
                 "[UnavailableReason] IS NULL OR [UnavailableReason] IN ('AnalysisPending','AnalysisFailed','InsufficientData','NoMeasurableCriteria')");
+            table.HasCheckConstraint("CK_ApplicationEvaluations_RequiredCriteriaStatus",
+                "[RequiredCriteriaStatus] IS NULL OR [RequiredCriteriaStatus] IN ('AllMatched','MissingEvidence','NoRequiredCriteria','Unavailable')");
         });
         builder.HasKey(record => record.Id);
         builder.Property(record => record.SchemaVersion).HasMaxLength(32).IsRequired();
@@ -27,6 +29,7 @@ public class ApplicationEvaluationConfiguration : IEntityTypeConfiguration<Appli
         builder.Property(record => record.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(record => record.Score).HasPrecision(5, 2);
         builder.Property(record => record.UnavailableReason).HasConversion<string>().HasMaxLength(32);
+        builder.Property(record => record.RequiredCriteriaStatus).HasConversion<string>().HasMaxLength(24).IsUnicode(false);
         builder.Property(record => record.ResultJson).HasColumnType("nvarchar(max)").IsRequired();
         builder.Property(record => record.EvaluatedAt).HasDefaultValueSql("SYSDATETIMEOFFSET()");
         builder.HasOne(record => record.InternshipApplication).WithOne(record => record.Evaluation)

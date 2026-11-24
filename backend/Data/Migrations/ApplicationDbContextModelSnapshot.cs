@@ -192,6 +192,11 @@ namespace StajFlow.Api.Data.Migrations
                     b.Property<int?>("PostingAnalysisId")
                         .HasColumnType("int");
 
+                    b.Property<string>("RequiredCriteriaStatus")
+                        .HasMaxLength(24)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(24)");
+
                     b.Property<string>("ResultJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -237,6 +242,8 @@ namespace StajFlow.Api.Data.Migrations
                     b.ToTable("ApplicationEvaluations", null, t =>
                         {
                             t.HasCheckConstraint("CK_ApplicationEvaluations_Json", "ISJSON([ResultJson]) = 1");
+
+                            t.HasCheckConstraint("CK_ApplicationEvaluations_RequiredCriteriaStatus", "[RequiredCriteriaStatus] IS NULL OR [RequiredCriteriaStatus] IN ('AllMatched','MissingEvidence','NoRequiredCriteria','Unavailable')");
 
                             t.HasCheckConstraint("CK_ApplicationEvaluations_Score", "[Score] IS NULL OR [Score] BETWEEN 0 AND 100");
 
@@ -445,7 +452,8 @@ namespace StajFlow.Api.Data.Migrations
                     b.HasIndex("ResumeId", "StudentProfileId");
 
                     b.HasIndex("StudentProfileId", "InternshipPostingId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Status] <> 'Withdrawn'");
 
                     b.ToTable("Applications", null, t =>
                         {

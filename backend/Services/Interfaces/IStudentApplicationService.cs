@@ -13,7 +13,7 @@ public interface IStudentApplicationService
     Task<ApplicationCreationResult> CreateAsync(string userId, CreateApplicationRequest request, CancellationToken cancellationToken);
 }
 
-public enum ApplicationCreationError { NotFound, InvalidResume, AlreadyApplied, DeadlinePassed }
+public enum ApplicationCreationError { NotFound, InvalidResume, AlreadyApplied, DeadlinePassed, VersionConflict }
 public record ApplicationCreationResult(InternshipApplicationDto? Application, ApplicationCreationError? Error = null);
 
 public enum ApplicationWithdrawalError { NotFound, InvalidStatus, VersionConflict }

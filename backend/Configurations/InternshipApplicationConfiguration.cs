@@ -14,7 +14,8 @@ public class InternshipApplicationConfiguration : IEntityTypeConfiguration<Inter
             table.HasCheckConstraint("CK_Applications_StatusUpdatedAt", "[StatusUpdatedAt] IS NULL OR [StatusUpdatedAt] >= [AppliedAt]");
         });
         builder.HasKey(record => record.Id);
-        builder.HasIndex(record => new { record.StudentProfileId, record.InternshipPostingId }).IsUnique();
+        builder.HasIndex(record => new { record.StudentProfileId, record.InternshipPostingId }).IsUnique()
+            .HasFilter("[Status] <> 'Withdrawn'");
         builder.HasIndex(record => new { record.InternshipPostingId, record.Status });
         builder.Property(record => record.CoverLetter).HasMaxLength(6000);
         builder.Property(record => record.Status).HasColumnName("Status").HasConversion<string>().HasMaxLength(20);

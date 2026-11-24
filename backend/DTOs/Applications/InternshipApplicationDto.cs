@@ -16,4 +16,5 @@ public record InternshipApplicationDto(
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("appliedAt")] DateTimeOffset AppliedAt,
     [property: JsonPropertyName("statusUpdatedAt")] DateTimeOffset? StatusUpdatedAt,
-    [property: JsonPropertyName("applicationDeadline")] DateTimeOffset? ApplicationDeadline = null);
+    [property: JsonPropertyName("applicationDeadline")] DateTimeOffset? ApplicationDeadline = null,
+    [property: JsonPropertyName("evaluation")] ApplicationEvaluationDto? Evaluation = null);

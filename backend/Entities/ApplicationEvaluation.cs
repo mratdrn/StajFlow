@@ -13,6 +13,7 @@ public class ApplicationEvaluation
     public EvaluationStatus Status { get; init; } = EvaluationStatus.NotCalculated;
     public decimal? Score { get; init; }
     public EvaluationUnavailableReason? UnavailableReason { get; init; }
+    public RequiredCriteriaStatus? RequiredCriteriaStatus { get; init; }
     public required string ResultJson { get; init; }
     public DateTimeOffset EvaluatedAt { get; init; } = DateTimeOffset.UtcNow;
     public InternshipApplication InternshipApplication { get; init; } = null!;

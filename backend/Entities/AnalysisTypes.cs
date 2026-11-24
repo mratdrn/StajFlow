@@ -30,3 +30,6 @@ public enum EvaluationUnavailableReason { AnalysisPending, AnalysisFailed, Insuf
 
 [JsonConverter(typeof(JsonStringEnumConverter<CriterionMatchStatus>))]
 public enum CriterionMatchStatus { Matched, NoEvidence }
+
+[JsonConverter(typeof(JsonStringEnumConverter<RequiredCriteriaStatus>))]
+public enum RequiredCriteriaStatus { AllMatched, MissingEvidence, NoRequiredCriteria, Unavailable }

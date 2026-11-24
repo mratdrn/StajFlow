@@ -4,13 +4,17 @@ using StajFlow.Api.Entities;
 namespace StajFlow.Api.DTOs.Analysis;
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-public sealed class ApplicationEvaluationData
+public sealed record ApplicationEvaluationData
 {
     [JsonPropertyName("resumeAnalysisStatus")]
     public AnalysisStatus? ResumeAnalysisStatus { get; init; }
 
     [JsonPropertyName("postingAnalysisStatus")]
     public AnalysisStatus? PostingAnalysisStatus { get; init; }
+    [JsonPropertyName("resumeAnalysis")]
+    public CompatibilityAnalysisSourceDto? ResumeAnalysis { get; init; }
+    [JsonPropertyName("postingAnalysis")]
+    public CompatibilityAnalysisSourceDto? PostingAnalysis { get; init; }
 
     [JsonPropertyName("criteria")]
     public List<CriterionEvaluationData> Criteria { get; init; } = [];

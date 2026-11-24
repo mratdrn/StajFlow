@@ -21,11 +21,13 @@ public class CompanyApplicationsController(ICompanyApplicationService service, I
     public async Task<IActionResult> List(
         [FromQuery(Name = "internshipPostingId"), Range(1, int.MaxValue, ErrorMessage = "Geçerli bir ilan seçin.")] int? postingId,
         [FromQuery, Range(1, int.MaxValue, ErrorMessage = "Sayfa numarası en az 1 olmalıdır.")] int? page,
-        [FromQuery, AllowedValues(null, "Submitted", "UnderReview", "Accepted", "Rejected", ErrorMessage = "Başvuru durumu geçersiz.")] string? status,
+        [FromQuery, AllowedValues(null, "Submitted", "UnderReview", "Shortlisted", "Accepted", "Rejected", "Withdrawn",
+            ErrorMessage = "Başvuru durumu geçersiz.")] string? status,
+        [FromQuery] CompanyApplicationFilters filters,
         CancellationToken cancellationToken)
     {
-        if (page.HasValue || status is not null)
-            return Ok(await service.ListPageAsync(IdentityUserId, postingId, page ?? 1, status, cancellationToken));
+        if (page.HasValue || status is not null || filters.IsSpecified)
+            return Ok(await service.ListPageAsync(IdentityUserId, postingId, page ?? 1, status, filters, cancellationToken));
         return Ok(await service.ListAsync(IdentityUserId, postingId, cancellationToken));
     }
 
@@ -45,6 +47,7 @@ public class CompanyApplicationsController(ICompanyApplicationService service, I
             ApplicationStatusError.NotFound => NotFound(),
             ApplicationStatusError.VersionConflict => Conflict(new { message = "Başvuru başka bir işlemde güncellendi. Güncel başvuruyu yükleyip tekrar deneyin." }),
             ApplicationStatusError.Withdrawn => Conflict(new { message = "Geri çekilmiş başvurunun durumu değiştirilemez." }),
+            ApplicationStatusError.Finalized => Conflict(new { message = "Kabul veya ret kararı kesinleşmiş başvurunun durumu değiştirilemez." }),
             _ => Ok(result.Application)
         };
     }
