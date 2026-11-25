@@ -4,6 +4,7 @@ import { getMyApplication, withdrawApplication } from "../services/applicationSe
 import { applicationStatusLabel, postingStatusLabel, locationLabel, workArrangementLabel } from "../components/formatters.js";
 import StatePanel from "../components/StatePanel.jsx";
 import LoadingState from "../components/LoadingState.jsx";
+import CompatibilityResult from "../components/CompatibilityResult.jsx";
 
 export default function ApplicationDetailPage() {
   const { id } = useParams();
@@ -57,7 +58,7 @@ export default function ApplicationDetailPage() {
     setWithdrawalError('');
     try {
       await withdrawApplication(id);
-      navigate('/ogrenci/basvurular', { replace: true, state: { success: 'Başvurunuz geri çekildi. İlan başvuruya açıksa aynı veya farklı bir CV ile yeniden başvurabilirsiniz.' } });
+      navigate('/ogrenci/basvurular', { replace: true, state: { success: 'Başvurunuz geri çekildi ve geçmişinizde saklandı. İlan açıksa aynı veya farklı bir CV ile yeniden başvurabilirsiniz.' } });
     } catch (failure) {
       setWithdrawalError(failure.message);
     } finally { setIsWithdrawing(false); }
@@ -74,6 +75,7 @@ export default function ApplicationDetailPage() {
         <article className="profile-card">
           <span className="badge">{applicationStatusLabel(application.status)}</span>
           <h2>{application.title}</h2><p className="muted">{application.companyName}</p>
+          <CompatibilityResult result={application.evaluation} snapshot />
           <dl>
             <div><dt>Başvuru durumu</dt><dd>{applicationStatusLabel(application.status)}</dd></div>
             <div><dt>Başvuru zamanı</dt><dd>{new Date(application.appliedAt).toLocaleString('tr-TR')}</dd></div>
@@ -84,10 +86,13 @@ export default function ApplicationDetailPage() {
             <div><dt>İlanın güncel durumu</dt><dd>{application.postingStatus !== 'Closed' && application.applicationDeadline && new Date(application.applicationDeadline) <= new Date() ? 'Süresi doldu' : postingStatusLabel(application.postingStatus)}</dd></div>
           </dl>
           <div className="profile-form-actions"><button className="button secondary-button" type="button" disabled={isWithdrawing} onClick={() => setAttempt((value) => value + 1)}>Durumu yenile</button>
-            <Link className="button" to={`/ogrenci/basvurular/${application.id}/ilan`}>İlanı görüntüle</Link></div>
+            <Link className="button" to={`/ogrenci/basvurular/${application.id}/ilan`}>İlanı görüntüle</Link>
+            {application.status === 'Withdrawn' && application.postingStatus === 'Published' &&
+              (!application.applicationDeadline || new Date(application.applicationDeadline) > new Date()) &&
+              <Link className="button" to={`/staj-ilanlari/${application.internshipPostingId}`}>İlana yeniden başvur</Link>}</div>
           {['Submitted', 'UnderReview'].includes(application.status) && <section className="application-section" aria-labelledby="withdraw-heading">
             <h3 id="withdraw-heading">Başvuruyu geri çek</h3>
-            <p>Başvurunuz listeden ve şirketin gelen başvurularından kaldırılır. İlan başvuruya açıksa aynı veya farklı bir CV ile yeniden başvurabilirsiniz.</p>
+            <p>Geri çekilen başvuru geçmişinizde kalır ve şirket bu başvurunun durumunu değiştiremez. İlan başvuruya açıksa aynı veya farklı bir CV ile yeniden başvurabilirsiniz.</p>
             {withdrawalError && <p className="form-alert" role="alert">{withdrawalError}</p>}
             {isConfirming ? <>
               <p>Başvurunuzu geri çekmek istediğinizden emin misiniz?</p>

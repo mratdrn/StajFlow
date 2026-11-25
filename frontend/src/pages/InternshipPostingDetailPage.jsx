@@ -8,6 +8,8 @@ import Icon from "../components/Icon.jsx";
 import LoadingState from "../components/LoadingState.jsx";
 import StatePanel from "../components/StatePanel.jsx";
 import ApplicationForm from "../components/ApplicationForm.jsx";
+import PostingCompatibility from "../components/PostingCompatibility.jsx";
+import { useAuth } from "../components/AuthProvider.jsx";
 
 function Requirements({ title, requirements, type }) {
   const items = requirements.filter((item) => item.type === type);
@@ -23,8 +25,14 @@ function Requirements({ title, requirements, type }) {
 
 export default function InternshipPostingDetailPage({ applicationPosting = false }) {
   const { id } = useParams();
+  const { user } = useAuth();
   const [state, setState] = useState({ isLoading: true, posting: null, error: null, notFound: false });
   const [attempt, setAttempt] = useState(0);
+  const [resumeChoice, setResumeChoice] = useState(null);
+
+  const choiceScope = `${id}:${user?.id ?? ''}`;
+  const resumeId = resumeChoice?.scope === choiceScope ? resumeChoice.id : '';
+  useEffect(() => { setResumeChoice(null); }, [choiceScope, applicationPosting]);
 
   useEffect(() => {
     document.title = 'İlan ayrıntıları | StajFlow';
@@ -77,6 +85,8 @@ export default function InternshipPostingDetailPage({ applicationPosting = false
             ? 'Bu ilanın başvuru süresi dolmuştur. Mevcut başvurunuz korunur; ilanın ayrıntılarını inceleyebilirsiniz.'
             : !isOpen ? 'Bu ilan yeni başvurulara kapalıdır. Mevcut başvurunuz üzerinden ayrıntıları inceleyebilirsiniz.'
             : 'Başvurduğunuz ilanın güncel ayrıntılarını görüntülüyorsunuz.'}</p>}
+          {!applicationPosting && posting.id === Number(id) && isOpen && user?.role === 'Student' && <PostingCompatibility
+            key={choiceScope} postingId={posting.id} resumeId={resumeId} />}
           <div className="detail-grid">
             <article className="detail-content">
               <section>
@@ -86,7 +96,8 @@ export default function InternshipPostingDetailPage({ applicationPosting = false
               </section>
               <Requirements title="Zorunlu nitelikler" type="Required" requirements={posting.requirements} />
               <Requirements title="Tercih edilen nitelikler" type="Preferred" requirements={posting.requirements} />
-              {applicationPosting ? <Link className="button" to={`/ogrenci/basvurular/${id}`}>Başvurumu görüntüle</Link> : <ApplicationForm key={posting.id} posting={posting} />}
+              {applicationPosting ? <Link className="button" to={`/ogrenci/basvurular/${id}`}>Başvurumu görüntüle</Link> : <ApplicationForm
+                key={choiceScope} posting={posting} resumeId={resumeId} onResumeChange={(selected) => setResumeChoice({ scope: choiceScope, id: selected })} />}
             </article>
             <aside className="summary-card" aria-labelledby="summary-heading">
               <h2 id="summary-heading">Kısaca</h2>

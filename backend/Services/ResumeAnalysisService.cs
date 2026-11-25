@@ -51,6 +51,10 @@ public sealed class ResumeAnalysisService(ApplicationDbContext context, IPdfText
         {
             return new(null);
         }
+        catch (InvalidOperationException error) when (error.GetBaseException() is SqlException { Number: 1205 })
+        {
+            return new(null);
+        }
     }
 
     public async Task<bool> ProcessNextAsync(CancellationToken cancellationToken)
@@ -60,7 +64,8 @@ public sealed class ResumeAnalysisService(ApplicationDbContext context, IPdfText
             .FirstOrDefaultAsync(cancellationToken);
         if (analysis is null) return false;
         analysis.Status = AnalysisStatus.Processing;
-        analysis.StartedAt = clock.GetUtcNow();
+        var now = clock.GetUtcNow();
+        analysis.StartedAt = now < analysis.CreatedAt ? analysis.CreatedAt : now;
         try { await context.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateConcurrencyException) { return true; }
         try
@@ -102,7 +107,8 @@ public sealed class ResumeAnalysisService(ApplicationDbContext context, IPdfText
                 return true;
             }
             var request = new LlmJsonRequest(ResumeAnalysisContract.Instruction, text, ResumeAnalysisContract.CreateSchema(),
-                json => ResumeAnalysisContract.Validate(json, text, value => redaction.RemoveIdentifiers(value, fullName, student.Email, student.PhoneNumber)));
+                json => ResumeAnalysisContract.Validate(json, text, value => redaction.RemoveIdentifiers(value, fullName, student.Email, student.PhoneNumber),
+                    reason => logger.LogWarning("CV yanıtı doğrulanamadı. AnalysisId: {AnalysisId}, Reason: {Reason}", analysis.Id, reason)));
             var result = await llm.GenerateJsonAsync(request, cancellationToken);
             await FinishAsync(analysis, result.Json, result.ErrorCode, cancellationToken);
         }
@@ -132,7 +138,8 @@ public sealed class ResumeAnalysisService(ApplicationDbContext context, IPdfText
         analysis.Status = json is not null && error is null ? AnalysisStatus.Completed : AnalysisStatus.Failed;
         analysis.DataJson = analysis.Status == AnalysisStatus.Completed ? json : null;
         analysis.ErrorCode = analysis.Status == AnalysisStatus.Completed ? null : error ?? AnalysisErrorCode.ProcessingFailed;
-        analysis.CompletedAt = clock.GetUtcNow();
+        var now = clock.GetUtcNow();
+        analysis.CompletedAt = now < analysis.StartedAt ? analysis.StartedAt : now;
         await context.SaveChangesAsync(cancellationToken);
         if (analysis.ErrorCode.HasValue)
             logger.LogWarning("CV analizi tamamlanamadı. AnalysisId: {AnalysisId}, ErrorCode: {ErrorCode}", analysis.Id, analysis.ErrorCode.Value);

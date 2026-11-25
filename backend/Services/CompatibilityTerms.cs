@@ -60,6 +60,15 @@ internal static class CompatibilityTerms
     internal static string Education(string value) => Canonical(value, EducationAliases);
     internal static string Social(string value) => Canonical(value, SocialAliases);
 
+    internal static bool SocialMatches(string candidate, string expected)
+    {
+        var required = Social(expected);
+        if (Social(candidate) == required) return true;
+        if (!SocialAliases.ContainsValue(required)) return false;
+        return Regex.Split(Normalize(candidate), @"\s+(?:ve|and|&)\s+")
+            .Any(part => Social(part) == required);
+    }
+
     internal static bool TechnologyMatches(string candidate, string required)
     {
         var actual = Technology(candidate);

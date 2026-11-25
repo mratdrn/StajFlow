@@ -142,5 +142,9 @@ public class StudentApplicationService(ApplicationDbContext context, Compatibili
         {
             return new(null, ApplicationCreationError.VersionConflict);
         }
+        catch (InvalidOperationException error) when (error.GetBaseException() is SqlException { Number: 1205 })
+        {
+            return new(null, ApplicationCreationError.VersionConflict);
+        }
     }
 }

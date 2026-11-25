@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { getResumes, uploadResume, deleteResume } from "../services/resumeService.js";
 import StatePanel from "../components/StatePanel.jsx";
 import LoadingState from "../components/LoadingState.jsx";
+import ResumeAnalysisStatus from "../components/ResumeAnalysisStatus.jsx";
 
 export default function ResumesPage() {
   const [data, setData] = useState(null);
@@ -93,7 +94,8 @@ export default function ResumesPage() {
         {removeError && <p className="form-alert" role="alert">{removeError}</p>}
         {data.resumes.length === 0 ? <StatePanel title="Henüz özgeçmişiniz yok">İlk PDF özgeçmişinizi yukarıdaki alandan yükleyebilirsiniz.</StatePanel> :
           <div className="resume-list">{data.resumes.map((resume) => <article className="resume-card" key={resume.id}>
-            <div><h3>{resume.originalFileName}</h3><p className="muted">{(resume.fileSizeBytes / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} KB · {new Date(resume.uploadedAt).toLocaleString('tr-TR')}</p></div>
+            <div><h3>{resume.originalFileName}</h3><p className="muted">{(resume.fileSizeBytes / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} KB · {new Date(resume.uploadedAt).toLocaleString('tr-TR')}</p>
+              <ResumeAnalysisStatus resumeId={resume.id} disabled={deletingId !== null} /></div>
             <div className="resume-card-actions">
               <Link className={`button${deletingId === resume.id ? ' disabled-link' : ''}`}
                 aria-disabled={deletingId === resume.id} aria-label={`Görüntüle: ${resume.originalFileName}`}

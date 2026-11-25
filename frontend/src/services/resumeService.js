@@ -19,3 +19,11 @@ export function getResumeFile(id, signal) {
 export function deleteResume(id, signal) {
   return apiRequest(`${resumePath}/${encodeURIComponent(id)}`, { method: 'DELETE', signal });
 }
+
+export function getResumeAnalysis(id, signal) {
+  return apiRequest(`${resumePath}/${encodeURIComponent(id)}/analysis`, { signal });
+}
+
+export function requestResumeAnalysis(id, signal) {
+  return apiRequest(`${resumePath}/${encodeURIComponent(id)}/analysis`, { method: 'POST', signal });
+}

@@ -65,6 +65,10 @@ public sealed class PostingAnalysisService(ApplicationDbContext context, ILlmSer
         {
             return new(null, PostingAnalysisRequestError.Conflict);
         }
+        catch (InvalidOperationException error) when (error.GetBaseException() is SqlException { Number: 1205 })
+        {
+            return new(null, PostingAnalysisRequestError.Conflict);
+        }
     }
 
     internal async Task<bool> ProcessNextAsync(CancellationToken cancellationToken)
@@ -92,7 +96,8 @@ public sealed class PostingAnalysisService(ApplicationDbContext context, ILlmSer
             }
 
             var request = new LlmJsonRequest(PostingAnalysisContract.Instruction, source.ToInput(),
-                PostingAnalysisContract.CreateSchema(), json => PostingAnalysisContract.Validate(json, source), "postingText");
+                PostingAnalysisContract.CreateSchema(), json => PostingAnalysisContract.Validate(json, source,
+                    reason => logger.LogWarning("İlan yanıtı doğrulanamadı. AnalysisId: {AnalysisId}, Reason: {Reason}", analysis.Id, reason)), "postingText");
             var response = await llm.GenerateJsonAsync(request, cancellationToken);
             await FinishAsync(analysis, response.Json, response.ErrorCode, cancellationToken);
         }

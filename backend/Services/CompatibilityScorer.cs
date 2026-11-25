@@ -137,8 +137,7 @@ public sealed class CompatibilityScorer
 
     private static SocialIndicatorData EvaluateSocial(ResumeAnalysisData resume, SocialExpectationData expectation)
     {
-        var name = CompatibilityTerms.Social(expectation.Name);
-        var match = resume.SocialIndicators.Where(item => CompatibilityTerms.Social(item.Name) == name &&
+        var match = resume.SocialIndicators.Where(item => CompatibilityTerms.SocialMatches(item.Name, expectation.Name) &&
                 item.EvidenceStatus != EvidenceStatus.NoEvidence && item.Evidence.Any(IsQuoted))
             .OrderBy(item => item.EvidenceStatus == EvidenceStatus.EvidenceFound ? 0 : 1).FirstOrDefault();
         return new()

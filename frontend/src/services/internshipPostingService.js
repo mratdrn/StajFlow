@@ -8,3 +8,9 @@ export function getInternshipPosting(id, signal) {
   return apiRequest(`/api/internship-postings/${encodeURIComponent(id)}`, { signal });
 }
 
+export function getPostingCompatibility(postingId, resumeId, signal) {
+  const query = new URLSearchParams();
+  if (resumeId) query.set('resumeId', resumeId);
+  return apiRequest(`/api/internship-postings/${encodeURIComponent(postingId)}/compatibility${query.size ? `?${query}` : ''}`, { signal });
+}
+

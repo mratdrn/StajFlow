@@ -46,7 +46,7 @@ public sealed class AnalysisWorker(IServiceScopeFactory scopeFactory, IOptions<G
                 .ExecuteUpdateAsync(setters => setters.SetProperty(record => record.Status, AnalysisStatus.Failed)
                     .SetProperty(record => record.DataJson, (string?)null)
                     .SetProperty(record => record.ErrorCode, (AnalysisErrorCode?)AnalysisErrorCode.Cancelled)
-                    .SetProperty(record => record.CompletedAt, now), cancellationToken);
+                    .SetProperty(record => record.CompletedAt, record => record.StartedAt > now ? record.StartedAt : now), cancellationToken);
             await database.PostingAnalyses.Where(record => record.Status == AnalysisStatus.Processing)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(record => record.Status, AnalysisStatus.Failed)
                     .SetProperty(record => record.DataJson, (string?)null)

@@ -29,11 +29,20 @@ internal static class AnalysisJson
     {
         if (node is JsonObject obj)
         {
+            if (obj["type"]?.ToJsonString() is { } type && (type == "\"string\"" ||
+                obj["type"] is JsonArray types && types.Any(item => item?.ToJsonString() == "\"string\"")))
+            {
+                obj["minLength"] = 1;
+                obj["pattern"] = @"\S";
+            }
             if (obj["properties"] is JsonObject properties)
             {
                 obj["additionalProperties"] = false;
                 obj["required"] = new JsonArray(properties.Select(property => (JsonNode?)JsonValue.Create(property.Key)).ToArray());
                 if (properties["sourceQuote"] is JsonObject quote) quote["maxLength"] = 400;
+                foreach (var name in new[] { "studyYear", "startYear", "endYear" })
+                    if (properties[name] is JsonObject year) year["minimum"] = 1;
+                if (properties["durationMonths"] is JsonObject duration) duration["minimum"] = 0;
             }
             foreach (var child in obj.ToArray()) CompleteSchema(child.Value);
         }
@@ -47,8 +56,11 @@ internal static class AnalysisJson
         try
         {
             using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 32 });
-            return HasShape(document.RootElement, typeof(T), new NullabilityInfoContext())
-                ? JsonSerializer.Deserialize<T>(json, JsonOptions) : null;
+            var nullability = new NullabilityInfoContext();
+            if (!HasShape(document.RootElement, typeof(T), nullability)) return null;
+            var node = JsonNode.Parse(json)!;
+            NormalizeOptionalText(node, typeof(T), nullability);
+            return node.Deserialize<T>(JsonOptions);
         }
         catch (Exception error) when (error is JsonException or NotSupportedException or ArgumentException or OverflowException)
         {
@@ -76,8 +88,30 @@ internal static class AnalysisJson
             var name = property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? property.Name;
             if (!element.TryGetProperty(name, out var child)) return false;
             if (child.ValueKind == JsonValueKind.Null && !property.PropertyType.IsValueType && nullability.Create(property).ReadState == NullabilityState.Nullable) continue;
+            if (property.PropertyType == typeof(string) && child.ValueKind == JsonValueKind.String &&
+                nullability.Create(property).ReadState == NullabilityState.Nullable) continue;
             if (!HasShape(child, property.PropertyType, nullability)) return false;
         }
         return true;
+    }
+
+    private static void NormalizeOptionalText(JsonNode node, Type type, NullabilityInfoContext nullability)
+    {
+        if (node is JsonArray array && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
+        {
+            foreach (var child in array)
+                if (child is not null) NormalizeOptionalText(child, type.GenericTypeArguments[0], nullability);
+        }
+        else if (node is JsonObject obj)
+        {
+            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                var name = property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? property.Name;
+                if (obj[name] is not { } child) continue;
+                if (property.PropertyType == typeof(string) && nullability.Create(property).ReadState == NullabilityState.Nullable &&
+                    string.IsNullOrWhiteSpace(child.GetValue<string>())) obj[name] = null;
+                else NormalizeOptionalText(child, property.PropertyType, nullability);
+            }
+        }
     }
 }

@@ -6,7 +6,11 @@ public sealed class GeminiApiKeyProvider(IHostEnvironment environment)
     {
         var configured = Environment.GetEnvironmentVariable("Gemini__ApiKey");
         if (string.IsNullOrWhiteSpace(configured)) configured = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
-        if (!string.IsNullOrWhiteSpace(configured)) return configured.Trim();
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            var value = configured.Trim();
+            return value.Any(char.IsControl) ? null : value;
+        }
         if (!environment.IsDevelopment()) return null;
         var path = Path.Combine(environment.ContentRootPath, ".env");
         try

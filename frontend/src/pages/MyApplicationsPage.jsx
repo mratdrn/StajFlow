@@ -5,6 +5,7 @@ import { applicationStatusLabel, locationLabel, workArrangementLabel } from "../
 import StatePanel from "../components/StatePanel.jsx";
 import Pagination from "../components/Pagination.jsx";
 import LoadingState from "../components/LoadingState.jsx";
+import { compatibilityScore } from "../components/compatibilityLabels.js";
 
 const statusFilters = [
   { value: '', label: 'Tümü' },
@@ -12,6 +13,7 @@ const statusFilters = [
   { value: 'UnderReview', label: 'İnceleniyor' },
   { value: 'Accepted', label: 'Kabul edildi' },
   { value: 'Rejected', label: 'Reddedildi' },
+  { value: 'Withdrawn', label: 'Geri çekildi' },
 ];
 
 export default function MyApplicationsPage() {
@@ -83,6 +85,7 @@ export default function MyApplicationsPage() {
           <p>{application.companyName}</p><p className="muted">{locationLabel(application)} · {workArrangementLabel(application.workArrangement)}</p>
           <p className="muted">Başvuru: {new Date(application.appliedAt).toLocaleString('tr-TR')}</p>
           <p className="muted">Özgeçmiş: {application.resumeFileName}</p>
+          <p className="muted">Başvuru anındaki uyumluluk: {compatibilityScore(application.evaluation) ?? 'Hesaplanamadı'}</p>
           {application.statusUpdatedAt && <p className="muted">Durum güncellemesi: {new Date(application.statusUpdatedAt).toLocaleString('tr-TR')}</p>}
           <Link className="button secondary-button" aria-label={`Başvuru ayrıntıları: ${application.title}`} to={`/ogrenci/basvurular/${application.id}`}>Başvuruyu görüntüle</Link>
         </article>)}</div>

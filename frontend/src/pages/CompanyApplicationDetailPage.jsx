@@ -4,6 +4,7 @@ import { getIncomingApplication, updateApplicationStatus } from "../services/com
 import { applicationStatusLabel } from "../components/formatters.js";
 import StatePanel from "../components/StatePanel.jsx";
 import LoadingState from "../components/LoadingState.jsx";
+import CompatibilityResult from "../components/CompatibilityResult.jsx";
 
 const statuses = ['UnderReview', 'Accepted', 'Rejected'];
 
@@ -58,6 +59,7 @@ export default function CompanyApplicationDetailPage() {
         <article className="profile-card">
           <span className={`badge${application.status === 'Accepted' ? ' badge-accepted' : ''}`}>{applicationStatusLabel(application.status, 'Company')}</span>
           <h2>{application.studentFullName}</h2><p className="muted">{application.title}</p>
+          <CompatibilityResult result={application.evaluation} snapshot />
           <dl className="company-application-details">
             <div><dt>E-posta</dt><dd>{application.studentEmail}</dd></div>
             <div><dt>Üniversite ve bölüm</dt><dd>{[application.university, application.department].filter(Boolean).join(' · ') || 'Belirtilmemiş'}</dd></div>
@@ -69,14 +71,16 @@ export default function CompanyApplicationDetailPage() {
           <div className="profile-form-actions"><Link className="button secondary-button" to={`/sirket/basvurular/${application.id}/ozgecmis`}>CV'yi görüntüle</Link>
             <Link className="button secondary-button" to={`/sirket/ilanlar/${application.internshipPostingId}/duzenle`}>İlanı görüntüle</Link></div>
           <section className="application-section" aria-labelledby="durum-baslik"><h2 id="durum-baslik">Başvuru durumunu güncelle</h2>
-            {application.status === 'Withdrawn' ? <p className="muted">Başvuru geri çekilmiş; durumu değiştirilemez.</p> : <form onSubmit={save}>
+            {success && <p className="success-notice" role="status">{success}</p>}
+            {application.status === 'Withdrawn' ? <p className="muted">Başvuru geri çekilmiş; durumu değiştirilemez.</p>
+              : ['Accepted', 'Rejected'].includes(application.status) ? <p className="muted">Karar kesinleşti. Başvuru durumu değiştirilemez.</p>
+              : <form onSubmit={save}>
               <div className="form-field"><label htmlFor="application-status">Yeni başvuru durumu</label>
                 <select id="application-status" value={newStatus} onChange={(event) => { setNewStatus(event.target.value); event.target.setCustomValidity(''); }} required disabled={isSaving || hasConflict}
                   onInvalid={(event) => event.currentTarget.setCustomValidity('Yeni başvuru durumunu seçin.')}>
                   <option value="" disabled>Durum seçin</option>{statuses.map((status) => <option key={status} value={status}>{applicationStatusLabel(status, 'Company')}</option>)}
                 </select></div>
               {registrationError && <p className="form-alert" role="alert">{registrationError}</p>}
-              {success && <p className="success-notice" role="status">{success}</p>}
               <div className="profile-form-actions"><button className="button" type="submit" disabled={isSaving || hasConflict || !newStatus || newStatus === application.status}>{isSaving ? 'Kaydediliyor…' : 'Durumu kaydet'}</button>
                 <button className="button secondary-button" type="button" disabled={isSaving} onClick={() => setAttempt((value) => value + 1)}>{hasConflict ? 'Güncel başvuruyu yükle' : 'Başvuruyu yenile'}</button></div>
             </form>}

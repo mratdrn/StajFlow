@@ -39,10 +39,16 @@ internal static class PostingAnalysisContract
 
     internal static JsonNode CreateSchema() => AnalysisJson.CreateSchema<PostingAnalysisData>();
 
-    internal static string? Validate(string json, PostingAnalysisSource source)
+    internal static string? Validate(string json, PostingAnalysisSource source, Action<string>? reportFailure = null)
     {
+        string? Reject(string reason)
+        {
+            reportFailure?.Invoke(reason);
+            return null;
+        }
         var data = AnalysisJson.Read<PostingAnalysisData>(json);
-        if (data is null || !IsUsable(data)) return null;
+        if (data is null) return Reject("JsonShape");
+        if (!IsUsable(data)) return Reject(data.Criteria.Select(CriterionFailure).FirstOrDefault(reason => reason is not null) ?? "ResultRules");
         foreach (var criterion in data.Criteria)
         {
             var quote = criterion.Evidence!.SourceQuote!;
@@ -50,14 +56,14 @@ internal static class PostingAnalysisContract
             {
                 var requirement = source.Requirements.FirstOrDefault(item => item.Id == id);
                 if (requirement is null || requirement.Type != criterion.Type || !CompatibilityTerms.Normalize(requirement.Description)
-                    .Contains(CompatibilityTerms.Normalize(quote), StringComparison.Ordinal)) return null;
+                    .Contains(CompatibilityTerms.Normalize(quote), StringComparison.Ordinal)) return Reject("RequirementEvidence");
             }
-            else if (!source.ContainsQuote(quote)) return null;
-            if (criterion.Technologies.Any(value => !CompatibilityTerms.HasTechnology(quote, value))) return null;
+            else if (!source.ContainsQuote(quote)) return Reject("CriterionQuote");
+            if (criterion.Technologies.Any(value => !CompatibilityTerms.HasTechnology(quote, value))) return Reject("TechnologyEvidence");
         }
         if (data.SocialExpectations.Any(item => !source.ContainsQuote(item.Evidence!.SourceQuote!) &&
             !source.Requirements.Any(requirement => CompatibilityTerms.Normalize(requirement.Description)
-                .Contains(CompatibilityTerms.Normalize(item.Evidence.SourceQuote!), StringComparison.Ordinal)))) return null;
+                .Contains(CompatibilityTerms.Normalize(item.Evidence.SourceQuote!), StringComparison.Ordinal)))) return Reject("SocialQuote");
 
         var normalized = new PostingAnalysisData
         {
@@ -83,26 +89,32 @@ internal static class PostingAnalysisContract
         data.SocialExpectations.Count <= MaxCriteria && data.Criteria.All(IsUsable) &&
         data.SocialExpectations.All(item => item.Name.Length <= 120 && item.Description?.Length is not > 400 && HasQuote(item.Evidence));
 
-    private static bool IsUsable(PostingCriterionData criterion)
+    private static bool IsUsable(PostingCriterionData criterion) => CriterionFailure(criterion) is null;
+
+    private static string? CriterionFailure(PostingCriterionData criterion)
     {
         if (criterion.Id.Length > 128 || criterion.Description.Length > 400 || criterion.SourceRequirementId is <= 0 ||
             !HasQuote(criterion.Evidence) || criterion.Technologies.Count > 12 || criterion.Technologies.Any(value => value.Length > 120) ||
             (criterion.AnyTechnology && criterion.Technologies.Count < 2) || criterion.ProjectTopic?.Length is > 150 ||
             criterion.ExperienceRole?.Length is > 120 || criterion.EducationLevel?.Length is > 120 || criterion.FieldOfStudy?.Length is > 150 ||
             criterion.MinimumDurationMonths is <= 0 or > 1200 || criterion.MinimumStudyYear is < 1 or > 20 ||
-            criterion.MaximumStudyYear is < 1 or > 20 || criterion.MaximumStudyYear < criterion.MinimumStudyYear) return false;
-        if (criterion.Category != CriterionCategory.Project && criterion.ProjectTopic is not null) return false;
-        if (criterion.Category != CriterionCategory.Experience && (criterion.MinimumDurationMonths.HasValue ||
-            criterion.ExperienceRole is not null || criterion.ExperienceType.HasValue)) return false;
+            criterion.MaximumStudyYear is < 1 or > 20 || criterion.MaximumStudyYear < criterion.MinimumStudyYear) return "CriterionLimitsOrEvidence";
+        if (criterion.Category != CriterionCategory.Project && criterion.ProjectTopic is not null) return "ProjectFields";
+        if (criterion.Category != CriterionCategory.Experience)
+        {
+            if (criterion.MinimumDurationMonths.HasValue) return "NonExperienceDuration";
+            if (criterion.ExperienceRole is not null) return "NonExperienceRole";
+            if (criterion.ExperienceType is not null and not ExperienceType.Unspecified) return "NonExperienceType";
+        }
         if (criterion.Category != CriterionCategory.Education && (criterion.EducationLevel is not null ||
-            criterion.FieldOfStudy is not null || criterion.MinimumStudyYear.HasValue || criterion.MaximumStudyYear.HasValue)) return false;
+            criterion.FieldOfStudy is not null || criterion.MinimumStudyYear.HasValue || criterion.MaximumStudyYear.HasValue)) return "EducationFields";
         return criterion.Category switch
         {
-            CriterionCategory.TechnicalSkill => criterion.Technologies.Count == 1 || criterion.AnyTechnology,
-            CriterionCategory.Project or CriterionCategory.Experience => true,
+            CriterionCategory.TechnicalSkill => criterion.Technologies.Count == 1 || criterion.AnyTechnology ? null : "TechnicalTechnologyCount",
+            CriterionCategory.Project or CriterionCategory.Experience => null,
             CriterionCategory.Education => criterion.Technologies.Count == 0 && (criterion.EducationLevel is not null ||
-                criterion.FieldOfStudy is not null || criterion.MinimumStudyYear.HasValue || criterion.MaximumStudyYear.HasValue),
-            _ => false
+                criterion.FieldOfStudy is not null || criterion.MinimumStudyYear.HasValue || criterion.MaximumStudyYear.HasValue) ? null : "EducationRequirements",
+            _ => "CriterionCategory"
         };
     }
 
@@ -144,7 +156,7 @@ internal static class PostingAnalysisContract
             Technologies = technologies,
             AnyTechnology = item.AnyTechnology && technologies.Count > 1,
             ProjectTopic = item.ProjectTopic,
-            ExperienceType = item.ExperienceType,
+            ExperienceType = item.ExperienceType == ExperienceType.Unspecified ? null : item.ExperienceType,
             ExperienceRole = item.ExperienceRole,
             MinimumDurationMonths = item.MinimumDurationMonths,
             EducationLevel = item.EducationLevel,

@@ -5,7 +5,7 @@ import { getResumes } from "../services/resumeService.js";
 import { getMyApplications, submitApplication } from "../services/applicationService.js";
 import FormField from "./FormField.jsx";
 
-export default function ApplicationForm({ posting }) {
+export default function ApplicationForm({ posting, resumeId, onResumeChange }) {
   const { user, isLoading } = useAuth();
   const [resumes, setResumes] = useState(null);
   const [existingApplication, setExistingApplication] = useState(null);
@@ -63,7 +63,9 @@ export default function ApplicationForm({ posting }) {
               <form onSubmit={submit}>
                 <fieldset disabled={isSubmitting}>
                   <div className="form-field"><label htmlFor="resumeId">Başvuru için özgeçmiş</label>
-                    <select id="resumeId" name="resumeId" required defaultValue="" onInvalid={(event) => event.currentTarget.setCustomValidity('Başvuruda kullanılacak özgeçmişi seçin.')} onChange={(event) => event.currentTarget.setCustomValidity('')}>
+                    <select id="resumeId" name="resumeId" required value={resumeId}
+                      onInvalid={(event) => event.currentTarget.setCustomValidity('Başvuruda kullanılacak özgeçmişi seçin.')}
+                      onChange={(event) => { event.currentTarget.setCustomValidity(''); onResumeChange(event.target.value); }}>
                       <option value="" disabled>Özgeçmiş seçin</option>
                       {resumes.map((resume) => <option key={resume.id} value={resume.id}>{resume.originalFileName} · {new Date(resume.uploadedAt).toLocaleString('tr-TR')} · {(resume.fileSizeBytes / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} KB</option>)}
                     </select><p className="field-hint">Seçtiğiniz PDF bu başvuruya bağlanır.</p></div>
