@@ -63,9 +63,9 @@ export default function ResumeAnalysisStatus({ resumeId, disabled }) {
   }
 
   const label = isLoading ? 'Durum yükleniyor…' : failed ? 'Durum alınamadı'
-    : analysis ? labels[analysis.status] || 'Durum bilinmiyor' : 'Henüz analiz edilmedi';
+    : analysis?.requiresReanalysis ? 'Yeniden analiz gerekli' : analysis ? labels[analysis.status] || 'Durum bilinmiyor' : 'Henüz analiz edilmedi';
   const documentError = analysis?.status === 'Failed' ? documentErrors[analysis.errorCode] : null;
-  const canStart = !isLoading && !failed && (!analysis || (analysis.status === 'Failed' && !documentError));
+  const canStart = !isLoading && !failed && (!analysis || (analysis.requiresReanalysis && !isActive(analysis)) || (analysis.status === 'Failed' && !documentError));
   const failureMessage = analysis?.errorCode === 'QuotaExceeded'
     ? 'Analiz kullanım sınırına ulaşıldı. Daha sonra yeniden deneyebilirsiniz.'
     : analysis?.errorCode === 'ProviderUnavailable'
@@ -76,7 +76,9 @@ export default function ResumeAnalysisStatus({ resumeId, disabled }) {
 
   return <div className="resume-analysis">
     <div className="resume-analysis-label" role="status"><span>CV analizi</span><span className="badge">{label}</span></div>
-    {analysis?.status === 'Failed' && <p className="muted">{documentError || failureMessage}</p>}
+    {analysis?.requiresReanalysis && !isActive(analysis) && <p className="muted">Uyumluluk hesaplanabilmesi için özgeçmişinizi yeniden analiz edin.</p>}
+    {analysis?.status === 'Failed' && <p className="muted" role="alert"><strong>CV analizi başarısız.</strong> {documentError || failureMessage}</p>}
+    {failed && <p className="muted" role="alert">CV analiz durumu kontrol edilemedi. Daha sonra tekrar deneyin.</p>}
     {requestError && <p className="muted" role="alert">{requestError}</p>}
     {failed && <button className="button secondary-button" type="button" onClick={() => { setRequestError(''); reload(); }} disabled={disabled}>Durumu yenile</button>}
     {canStart && <button className="button secondary-button" type="button" onClick={startAnalysis} disabled={disabled || isRequesting}>

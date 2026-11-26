@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { getCompanyPosting } from "../services/companyPostingService.js";
 import CompanyPostingForm from "../components/CompanyPostingForm.jsx";
 import StatePanel from "../components/StatePanel.jsx";
+import PostingAnalysisStatus from "../components/PostingAnalysisStatus.jsx";
 import LoadingState from "../components/LoadingState.jsx";
 
 export default function CompanyPostingEditorPage() {
@@ -35,14 +36,17 @@ export default function CompanyPostingEditorPage() {
     <Link className="back-link" to="/sirket/ilanlar">← İlanlarıma dön</Link>
     <div className="posting-management-heading"><div><p className="eyebrow">ŞİRKET HESABI</p>
       <h1 className="page-title">{id ? 'İlanı düzenle' : 'Yeni staj ilanı'}</h1>
-      <p className="muted">İlan bilgilerini, aradığınız nitelikleri ve yayın tercihlerinizi düzenleyin.</p></div></div>
+      <p className="muted">İlan bilgilerini ve yayın tercihlerinizi düzenleyin. Aradığınız nitelikleri ilan açıklamasında belirtin.</p></div></div>
     {isLoading ? <LoadingState detail /> : error ?
       <StatePanel title={error.status === 404 ? 'İlan bulunamadı' : 'İlan yüklenemedi'}
         isError onRetry={error.status === 404 ? undefined : () => setAttempt((value) => value + 1)}>
         {error.status === 404 ? 'Bu ilan mevcut değil veya şirketinize ait değil.' : error.message}
       </StatePanel> :
+      <>
+      {posting && <PostingAnalysisStatus key={`analysis-${posting.id}-${posting.rowVersion}`} posting={posting} />}
       <CompanyPostingForm key={posting ? `${posting.id}-${posting.rowVersion}` : 'yeni'} posting={id ? posting : null}
         reload={() => setAttempt((value) => value + 1)}
-        onSaved={(status) => navigate(status === 'Draft' ? '/sirket/taslak-ilanlar' : '/sirket/ilanlar', { state: { success: id ? 'İlan ve nitelikler güncellendi.' : 'İlan oluşturuldu.' } })} />}
+        onSaved={(status) => navigate(status === 'Draft' ? '/sirket/taslak-ilanlar' : '/sirket/ilanlar', { state: { success: id ? 'İlan güncellendi.' : 'İlan oluşturuldu.' } })} />
+      </>}
   </div>;
 }

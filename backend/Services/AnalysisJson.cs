@@ -39,10 +39,6 @@ internal static class AnalysisJson
             {
                 obj["additionalProperties"] = false;
                 obj["required"] = new JsonArray(properties.Select(property => (JsonNode?)JsonValue.Create(property.Key)).ToArray());
-                if (properties["sourceQuote"] is JsonObject quote) quote["maxLength"] = 400;
-                foreach (var name in new[] { "studyYear", "startYear", "endYear" })
-                    if (properties[name] is JsonObject year) year["minimum"] = 1;
-                if (properties["durationMonths"] is JsonObject duration) duration["minimum"] = 0;
             }
             foreach (var child in obj.ToArray()) CompleteSchema(child.Value);
         }
@@ -80,7 +76,8 @@ internal static class AnalysisJson
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
             return element.ValueKind == JsonValueKind.Array && element.EnumerateArray().All(item => HasShape(item, type.GenericTypeArguments[0], nullability));
         if (element.ValueKind != JsonValueKind.Object) return false;
-        var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public);
+        var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(property => property.GetCustomAttribute<JsonIgnoreAttribute>()?.Condition != JsonIgnoreCondition.Always).ToArray();
         var values = element.EnumerateObject().ToArray();
         if (values.Length != properties.Length || values.Select(value => value.Name).Distinct(StringComparer.Ordinal).Count() != values.Length) return false;
         foreach (var property in properties)
@@ -106,6 +103,7 @@ internal static class AnalysisJson
         {
             foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
             {
+                if (property.GetCustomAttribute<JsonIgnoreAttribute>()?.Condition == JsonIgnoreCondition.Always) continue;
                 var name = property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? property.Name;
                 if (obj[name] is not { } child) continue;
                 if (property.PropertyType == typeof(string) && nullability.Create(property).ReadState == NullabilityState.Nullable &&

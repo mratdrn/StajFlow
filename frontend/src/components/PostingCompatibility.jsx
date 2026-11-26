@@ -20,10 +20,7 @@ export default function PostingCompatibility({ postingId, resumeId }) {
     </>}
   </section>;
 
-  return <CompatibilityResult result={result}>
-    {result.resumeId ? <p className="muted">{resumeId
-      ? 'Bu sonuç başvuru için seçtiğiniz özgeçmişe aittir.'
-      : 'Bu sonuç en son yüklediğiniz özgeçmişe aittir. Başvuru formundan farklı bir özgeçmiş seçebilirsiniz.'}</p> : null}
+  return <CompatibilityResult result={result} compact>
     {(!result.resumeId || result.unavailableReason === 'AnalysisFailed' || result.unavailableReason === 'InsufficientData') &&
       <div className="compatibility-actions">
         <Link className="text-link" to="/ogrenci/ozgecmisler">Özgeçmişlerime git</Link>

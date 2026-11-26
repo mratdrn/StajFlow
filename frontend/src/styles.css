@@ -290,6 +290,12 @@ button:disabled { opacity: .6; cursor: not-allowed; }
 .resume-card > div:first-child { min-width: 0; }
 .resume-card-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-shrink: 0; max-width: 100%; }
 .resume-card-actions .button { margin-top: 0; }
+.resume-favorite-button { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; padding: 6px; border: 0; border-radius: 50%; background: transparent; color: var(--color-navy); flex-shrink: 0; }
+.resume-favorite-button .icon { width: 34px; height: 34px; }
+.resume-favorite-button.is-favorite { color: var(--color-coral); }
+.resume-favorite-button.is-favorite .icon { fill: currentColor; }
+.resume-favorite-button:hover:not(:disabled) { color: var(--color-coral); }
+.resume-favorite-button:disabled { cursor: wait; opacity: .6; }
 .resume-card h3 { overflow-wrap: anywhere; }
 .resume-card .muted { margin-top: 8px; font-size: 13px; }
 .resume-analysis { margin-top: 12px; overflow-wrap: anywhere; }
@@ -315,6 +321,8 @@ button:disabled { opacity: .6; cursor: not-allowed; }
 .compatibility-panel > h2, .profile-card .compatibility-panel > h2 { font-size: 20px; margin: 0 0 8px; }
 .compatibility-panel > p { margin-top: 8px; }
 .compatibility-score { color: var(--color-navy); font-size: clamp(34px, 5.5vw, 48px); font-weight: 750; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.compatibility-score-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; }
+.compatibility-score-summary .compatibility-warning { flex: 1 1 260px; margin: 0; }
 .compatibility-unavailable { font-weight: 700; }
 .compatibility-warning { padding: 10px 12px; border-left: 3px solid var(--color-coral); background: var(--color-surface-secondary); }
 .compatibility-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }

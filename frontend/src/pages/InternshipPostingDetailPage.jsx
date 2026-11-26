@@ -1,5 +1,5 @@
 import CompanyAvatar from "../components/CompanyAvatar.jsx";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { getMyApplicationPosting } from "../services/applicationService.js";
 import { getInternshipPosting } from "../services/internshipPostingService.js";
@@ -11,18 +11,6 @@ import ApplicationForm from "../components/ApplicationForm.jsx";
 import PostingCompatibility from "../components/PostingCompatibility.jsx";
 import { useAuth } from "../components/AuthProvider.jsx";
 
-function Requirements({ title, requirements, type }) {
-  const items = requirements.filter((item) => item.type === type);
-  return (
-    <section className="qualifications">
-      <h2>{title}</h2>
-      {items.length ? (
-        <ul>{items.map((item) => <li key={item.id}><Icon name="check" /><span>{item.description}</span></li>)}</ul>
-      ) : <p className="muted">{type === 'Required' ? 'Zorunlu nitelik belirtilmemiş.' : 'Tercih edilen nitelik belirtilmemiş.'}</p>}
-    </section>
-  );
-}
-
 export default function InternshipPostingDetailPage({ applicationPosting = false }) {
   const { id } = useParams();
   const { user } = useAuth();
@@ -32,6 +20,7 @@ export default function InternshipPostingDetailPage({ applicationPosting = false
 
   const choiceScope = `${id}:${user?.id ?? ''}`;
   const resumeId = resumeChoice?.scope === choiceScope ? resumeChoice.id : '';
+  const handleResumeChange = useCallback((selected) => setResumeChoice({ scope: choiceScope, id: selected }), [choiceScope]);
   useEffect(() => { setResumeChoice(null); }, [choiceScope, applicationPosting]);
 
   useEffect(() => {
@@ -91,13 +80,11 @@ export default function InternshipPostingDetailPage({ applicationPosting = false
             <article className="detail-content">
               <section>
                 <p className="eyebrow">STAJ HAKKINDA</p>
-                <h2>İş tanımı</h2>
+                <h2>İlan açıklaması</h2>
                 <p className="description">{posting.description}</p>
               </section>
-              <Requirements title="Zorunlu nitelikler" type="Required" requirements={posting.requirements} />
-              <Requirements title="Tercih edilen nitelikler" type="Preferred" requirements={posting.requirements} />
               {applicationPosting ? <Link className="button" to={`/ogrenci/basvurular/${id}`}>Başvurumu görüntüle</Link> : <ApplicationForm
-                key={choiceScope} posting={posting} resumeId={resumeId} onResumeChange={(selected) => setResumeChoice({ scope: choiceScope, id: selected })} />}
+                key={choiceScope} posting={posting} resumeId={resumeId} onResumeChange={handleResumeChange} />}
             </article>
             <aside className="summary-card" aria-labelledby="summary-heading">
               <h2 id="summary-heading">Kısaca</h2>

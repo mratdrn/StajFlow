@@ -18,8 +18,8 @@ public sealed class CompatibilityService(ApplicationDbContext context, Compatibi
 
         var resumes = context.Resumes.AsNoTracking().Where(item => item.StudentProfile.IdentityUserId == userId);
         if (resumeId.HasValue) resumes = resumes.Where(item => item.Id == resumeId.Value);
-        var resume = await WithResumeSource(resumes).OrderByDescending(item => item.UploadedAt)
-            .ThenByDescending(item => item.Id).FirstOrDefaultAsync(cancellationToken);
+        var resume = await WithResumeSource(resumes).OrderByDescending(item => item.IsFavorite)
+            .ThenBy(item => item.UploadedAt).ThenBy(item => item.Id).FirstOrDefaultAsync(cancellationToken);
         if (resumeId.HasValue && resume is null) return null;
 
         var evaluation = EvaluateSources(resume, posting);
@@ -91,11 +91,11 @@ public sealed class CompatibilityService(ApplicationDbContext context, Compatibi
     private CompatibilityScoringResult Evaluate(ResumeAnalysis? resume, PostingAnalysis? posting)
     {
         var status = UnavailableReason(resume?.Status, posting?.Status);
-        if (!status.HasValue && resume?.SchemaVersion == "1")
+        if (!status.HasValue && (resume?.SchemaVersion == ResumeAnalysisContract.SchemaVersion && posting?.SchemaVersion == PostingAnalysisContract.SchemaVersion))
         {
-            var resumeData = AnalysisJson.Read<ResumeAnalysisData>(resume.DataJson);
+            var resumeData = ResumeAnalysisContract.Read(resume.DataJson);
             var postingData = PostingAnalysisContract.Read(posting!.DataJson);
-            if (resumeData is not null && postingData is not null) return scorer.Evaluate(resumeData, postingData);
+            if (resumeData is not null && postingData is not null) return scorer.Evaluate(resumeData, postingData, DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime));
         }
         return new(null, status ?? EvaluationUnavailableReason.InsufficientData, new()
         {
@@ -117,7 +117,7 @@ public sealed class CompatibilityService(ApplicationDbContext context, Compatibi
         EvaluationUnavailableReason.AnalysisPending => "Uyumluluk hesaplanamadı. Analiz henüz tamamlanmadı.",
         EvaluationUnavailableReason.AnalysisFailed => "Uyumluluk hesaplanamadı. Gerekli analiz tamamlanamadı.",
         EvaluationUnavailableReason.NoMeasurableCriteria => "Uyumluluk hesaplanamadı. İlanda ölçülebilir kriter bulunamadı.",
-        EvaluationUnavailableReason.InsufficientData => "Uyumluluk hesaplanamadı. Güncel ilan veya CV analizi bulunamadı.",
+        EvaluationUnavailableReason.InsufficientData => "Uyumluluk hesaplanamadı. Güncel şemaya uygun CV ve ilan analizi gerekiyor. Eski analizleri yeniden başlatın.",
         _ => null
     };
 }

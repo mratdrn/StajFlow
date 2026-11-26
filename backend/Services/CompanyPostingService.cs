@@ -40,11 +40,12 @@ public class CompanyPostingService(ApplicationDbContext context, PostingAnalysis
         if (companyId is null) return new(null, PostingManagementError.NotFound);
         if (request.ApplicationDeadline <= DateTimeOffset.UtcNow)
             return new(null, PostingManagementError.InvalidDeadline);
+        var description = ComposeDescription(request);
+        if (description.Length > 10000) return new(null, PostingManagementError.InvalidDescription);
 
         var posting = new InternshipPosting { CompanyProfileId = companyId.Value, Title = request.Title.Trim(), Description = request.Description.Trim() };
         ApplyContent(posting, request);
-        foreach (var requirement in request.Requirements)
-            posting.Requirements.Add(new InternshipRequirement { Description = requirement.Description.Trim(), Type = Enum.Parse<RequirementType>(requirement.Type) });
+        posting.Description = description;
         context.InternshipPostings.Add(posting);
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
@@ -69,24 +70,12 @@ public class CompanyPostingService(ApplicationDbContext context, PostingAnalysis
         var existing = posting.Requirements.ToDictionary(requirement => requirement.Id);
         if (request.Requirements.Any(requirement => requirement.Id.HasValue && !existing.ContainsKey(requirement.Id.Value)))
             return new(null, PostingManagementError.InvalidRequirement);
+        var description = ComposeDescription(request);
+        if (description.Length > 10000) return new(null, PostingManagementError.InvalidDescription);
 
         var newlyPublished = posting.Status != PostingStatus.Published && request.Status == nameof(PostingStatus.Published);
         ApplyContent(posting, request);
-        var retainedIds = request.Requirements.Where(requirement => requirement.Id.HasValue).Select(requirement => requirement.Id!.Value).ToHashSet();
-        foreach (var silinen in posting.Requirements.Where(requirement => !retainedIds.Contains(requirement.Id)).ToList())
-        {
-            context.InternshipRequirements.Remove(silinen);
-            posting.Requirements.Remove(silinen);
-        }
-        foreach (var gelen in request.Requirements)
-        {
-            if (gelen.Id.HasValue)
-            {
-                existing[gelen.Id.Value].Description = gelen.Description.Trim();
-                existing[gelen.Id.Value].Type = Enum.Parse<RequirementType>(gelen.Type);
-            }
-            else posting.Requirements.Add(new InternshipRequirement { Description = gelen.Description.Trim(), Type = Enum.Parse<RequirementType>(gelen.Type) });
-        }
+        posting.Description = description;
         context.Entry(posting).Property(posting => posting.Title).IsModified = true;
         context.Entry(posting).Property(posting => posting.RowVersion).OriginalValue = version;
         try
@@ -131,10 +120,11 @@ public class CompanyPostingService(ApplicationDbContext context, PostingAnalysis
         posting.EndDate = request.EndDate;
     }
 
+    private static string ComposeDescription(PostingContentRequest request) => PostingDescription.Compose(request.Description,
+        request.Requirements.Select(item => (item.Description, Enum.Parse<RequirementType>(item.Type))));
+
     private static CompanyPostingDto CreateDto(InternshipPosting posting) => new(posting.Id, posting.Title, posting.Description,
         posting.Location, posting.WorkArrangement.ToString(), posting.Status.ToString(), posting.ApplicationDeadline, posting.StartDate,
-        posting.EndDate, posting.CreatedAt,
-        posting.Requirements.OrderBy(requirement => requirement.Id)
-            .Select(requirement => new InternshipRequirementDto(requirement.Id, requirement.Description, requirement.Type.ToString())).ToList(),
+        posting.EndDate, posting.CreatedAt, [],
         Convert.ToBase64String(posting.RowVersion), posting.ShortDescription);
 }

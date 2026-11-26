@@ -8,22 +8,22 @@ using StajFlow.Api.Services.Interfaces;
 
 namespace StajFlow.Api.Services;
 
-public sealed class LlmQuotaService(IServiceScopeFactory scopeFactory, IOptions<GeminiOptions> options, TimeProvider clock) : ILlmQuotaService
+public sealed class LlmQuotaService(IServiceScopeFactory scopeFactory, IOptions<GroqOptions> options, TimeProvider clock) : ILlmQuotaService
 {
-    private static readonly TimeZoneInfo QuotaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Los_Angeles");
+    private const string Provider = "Groq";
 
-    public static DateOnly GetQuotaDate(DateTimeOffset time) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(time, QuotaTimeZone).DateTime);
+    public static DateOnly GetQuotaDate(DateTimeOffset time) => DateOnly.FromDateTime(time.UtcDateTime);
 
     public static DateTimeOffset GetNextQuotaDay(DateTimeOffset time)
     {
-        var midnight = GetQuotaDate(time).AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
-        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(midnight, QuotaTimeZone));
+        return new DateTimeOffset(GetQuotaDate(time).AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
     }
 
-    public Task<LlmQuotaReservation> ReserveAsync(CancellationToken cancellationToken) =>
+    public Task<LlmQuotaReservation> ReserveAsync(LlmTokenBudget tokens, CancellationToken cancellationToken) =>
         WithBudgetAsync((budget, now) =>
         {
-            if (budget.RequestCount >= options.Value.DailyRequestLimit)
+            if (tokens.InputTokens < 0 || tokens.OutputTokens < 1 || tokens.Total > options.Value.TokensPerMinute ||
+                budget.RequestCount >= options.Value.DailyRequestLimit || tokens.Total > options.Value.DailyTokenLimit - budget.ReservedTokens)
                 return new LlmQuotaReservation(false, budget.Date);
             if (budget.BlockedUntil > now)
                 return new(false, budget.Date, budget.BlockedUntil <= now.AddSeconds(options.Value.MaxRetryDelaySeconds) ? budget.BlockedUntil : null);
@@ -31,21 +31,27 @@ public sealed class LlmQuotaService(IServiceScopeFactory scopeFactory, IOptions<
             {
                 budget.WindowStartedAt = now;
                 budget.WindowRequestCount = 0;
+                budget.WindowReservedTokens = 0;
             }
-            if (budget.WindowRequestCount >= options.Value.RequestsPerMinute)
+            if (budget.WindowRequestCount >= options.Value.RequestsPerMinute ||
+                tokens.Total > options.Value.TokensPerMinute - budget.WindowReservedTokens)
                 return new(false, budget.Date, budget.WindowStartedAt.AddMinutes(1));
             budget.RequestCount++;
             budget.WindowRequestCount++;
-            return new(true, budget.Date);
+            budget.ReservedTokens += tokens.Total;
+            budget.WindowReservedTokens += tokens.Total;
+            return new(true, budget.Date, ReservedTokens: tokens.Total);
         }, cancellationToken);
 
-    public async Task RecordTokensAsync(DateOnly date, int inputTokens, int outputTokens, CancellationToken cancellationToken) =>
+    public async Task RecordTokensAsync(LlmQuotaReservation reservation, int inputTokens, int outputTokens, CancellationToken cancellationToken) =>
         await WithBudgetAsync((budget, _) =>
         {
             budget.InputTokens += Math.Max(0, inputTokens);
             budget.OutputTokens += Math.Max(0, outputTokens);
+            budget.ReservedTokens = Math.Max(0, budget.ReservedTokens - reservation.ReservedTokens) +
+                Math.Max(0L, inputTokens) + Math.Max(0L, outputTokens);
             return true;
-        }, cancellationToken, date);
+        }, cancellationToken, reservation.Date);
 
     public async Task BlockAsync(DateTimeOffset until, CancellationToken cancellationToken) =>
         await WithBudgetAsync((budget, _) =>
@@ -66,18 +72,19 @@ public sealed class LlmQuotaService(IServiceScopeFactory scopeFactory, IOptions<
             """, cancellationToken);
         var now = clock.GetUtcNow();
         var day = date ?? GetQuotaDate(now);
-        var budget = await context.LlmDailyUsage.SingleOrDefaultAsync(record => record.Date == day, cancellationToken);
+        var budget = await context.LlmDailyUsage.SingleOrDefaultAsync(record => record.Provider == Provider && record.Date == day, cancellationToken);
         if (budget is null)
         {
-            var previous = await context.LlmDailyUsage.AsNoTracking().Where(record => record.Date < day)
+            var previous = await context.LlmDailyUsage.AsNoTracking().Where(record => record.Provider == Provider && record.Date < day)
                 .OrderByDescending(record => record.Date).FirstOrDefaultAsync(cancellationToken);
-            budget = new LlmDailyUsage { Date = day, WindowStartedAt = now };
+            budget = new LlmDailyUsage { Provider = Provider, Date = day, WindowStartedAt = now };
             if (previous is not null)
             {
                 if (previous.WindowStartedAt.AddMinutes(1) > now)
                 {
                     budget.WindowStartedAt = previous.WindowStartedAt;
                     budget.WindowRequestCount = previous.WindowRequestCount;
+                    budget.WindowReservedTokens = previous.WindowReservedTokens;
                 }
                 if (previous.BlockedUntil > now) budget.BlockedUntil = previous.BlockedUntil;
             }

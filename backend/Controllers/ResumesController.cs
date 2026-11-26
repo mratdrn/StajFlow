@@ -18,6 +18,14 @@ namespace StajFlow.Api.Controllers;
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public class ResumesController(IResumeService service, IResumeAnalysisService analysisService, IOptions<ResumeStorageOptions> options) : ControllerBase
 {
+    [HttpPut("{id:int}/favorite")]
+    public async Task<ActionResult<ResumeListDto>> SetFavorite(int id, CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        if (!await service.SetFavoriteAsync(userId, id, cancellationToken)) return NotFound();
+        return Ok(new ResumeListDto(options.Value.MaxFileSizeBytes, await service.ListAsync(userId, cancellationToken)));
+    }
+
     [HttpGet("{id:int}/analysis")]
     public async Task<ActionResult<ResumeAnalysisDto>> Analysis(int id, CancellationToken cancellationToken)
     {

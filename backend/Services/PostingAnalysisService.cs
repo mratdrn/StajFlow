@@ -15,7 +15,9 @@ public sealed class PostingAnalysisService(ApplicationDbContext context, ILlmSer
     {
         var fingerprint = PostingAnalysisSource.From(posting).Fingerprint();
         var latest = await LatestAsync(posting.Id, cancellationToken);
-        if (IsCurrent(latest, fingerprint) && (!retryFailed || latest!.Status != AnalysisStatus.Failed))
+        if (IsCurrent(latest, fingerprint) &&
+            (latest!.Status is AnalysisStatus.Pending or AnalysisStatus.Processing ||
+                latest.SchemaVersion == PostingAnalysisContract.SchemaVersion && (!retryFailed || latest.Status != AnalysisStatus.Failed)))
             return latest!;
 
         var pending = new PostingAnalysis
@@ -80,6 +82,12 @@ public sealed class PostingAnalysisService(ApplicationDbContext context, ILlmSer
         analysis.Status = AnalysisStatus.Processing;
         var now = clock.GetUtcNow();
         analysis.StartedAt = now < analysis.CreatedAt ? analysis.CreatedAt : now;
+        if (analysis.SchemaVersion != PostingAnalysisContract.SchemaVersion)
+        {
+            try { await FinishAsync(analysis, null, AnalysisErrorCode.Cancelled, cancellationToken); }
+            catch (DbUpdateConcurrencyException) { }
+            return true;
+        }
         try { await context.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateConcurrencyException) { return true; }
 
@@ -95,9 +103,11 @@ public sealed class PostingAnalysisService(ApplicationDbContext context, ILlmSer
                 return true;
             }
 
-            var request = new LlmJsonRequest(PostingAnalysisContract.Instruction, source.ToInput(),
-                PostingAnalysisContract.CreateSchema(), json => PostingAnalysisContract.Validate(json, source,
-                    reason => logger.LogWarning("İlan yanıtı doğrulanamadı. AnalysisId: {AnalysisId}, Reason: {Reason}", analysis.Id, reason)), "postingText");
+            string? correction = null;
+            var request = new LlmJsonRequest(PostingAnalysisContract.Instruction, PostingAnalysisContract.CreateInput(source),
+                PostingAnalysisContract.CreateSchema(), json => PostingAnalysisContract.Validate(json,
+                    reason => logger.LogWarning("İlan yanıtı doğrulanamadı. AnalysisId: {AnalysisId}, Reason: {Reason}", analysis.Id, reason),
+                    feedback => correction = feedback), "postingText", () => correction, initialOutputTokens: 1024);
             var response = await llm.GenerateJsonAsync(request, cancellationToken);
             await FinishAsync(analysis, response.Json, response.ErrorCode, cancellationToken);
         }
@@ -117,7 +127,7 @@ public sealed class PostingAnalysisService(ApplicationDbContext context, ILlmSer
     }
 
     internal static bool IsCurrent(PostingAnalysis? analysis, string fingerprint) => analysis is not null &&
-        analysis.SchemaVersion == PostingAnalysisContract.SchemaVersion && analysis.SourceContentHash == fingerprint;
+        analysis.SourceContentHash == fingerprint;
 
     private IQueryable<InternshipPosting> OwnedPostings(string userId) =>
         context.InternshipPostings.Where(item => item.CompanyProfile.IdentityUserId == userId);
@@ -139,12 +149,13 @@ public sealed class PostingAnalysisService(ApplicationDbContext context, ILlmSer
 
     private static PostingAnalysisDto ToDto(PostingAnalysis analysis) => new(analysis.Id, analysis.InternshipPostingId,
         analysis.Version, analysis.SchemaVersion, analysis.Status, analysis.CreatedAt, analysis.StartedAt, analysis.CompletedAt,
-        analysis.ErrorCode, ErrorMessage(analysis.ErrorCode), PostingAnalysisContract.Read(analysis.DataJson));
+        analysis.ErrorCode, ErrorMessage(analysis.ErrorCode), analysis.SchemaVersion == PostingAnalysisContract.SchemaVersion ? PostingAnalysisContract.Read(analysis.DataJson) : null,
+        analysis.SchemaVersion != PostingAnalysisContract.SchemaVersion);
 
     private static string? ErrorMessage(AnalysisErrorCode? error) => error switch
     {
         AnalysisErrorCode.InputTooLong => "İlan metni analiz sınırını aşıyor.",
-        AnalysisErrorCode.InvalidResponse => "Model yanıtı beklenen ilan kriteri yapısına veya kaynak alıntılarına uygun değil.",
+        AnalysisErrorCode.InvalidResponse => "Model yanıtı beklenen ortak analiz şemasına uygun değil.",
         AnalysisErrorCode.Cancelled => "İlan analizi kesildi. Güncel ilan için yeniden analiz isteyebilirsiniz.",
         _ => AnalysisErrorMessages.Get(error)
     };

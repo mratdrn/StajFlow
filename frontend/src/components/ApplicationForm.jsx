@@ -33,6 +33,15 @@ export default function ApplicationForm({ posting, resumeId, onResumeChange }) {
     return () => { abort.abort(); submissionAbort.current?.abort(); };
   }, [user?.id, user?.role, posting.id, attempt]);
 
+  const defaultResume = resumes?.find((resume) => resume.isFavorite) || resumes?.reduce((first, resume) =>
+    !first || new Date(resume.uploadedAt) < new Date(first.uploadedAt) ||
+      (resume.uploadedAt === first.uploadedAt && resume.id < first.id) ? resume : first, null);
+
+  useEffect(() => {
+    if (defaultResume && !resumes.some((resume) => String(resume.id) === String(resumeId)))
+      onResumeChange(String(defaultResume.id));
+  }, [resumes, resumeId, defaultResume, onResumeChange]);
+
   async function submit(event) {
     event.preventDefault();
     if (isSubmitting) return;
@@ -63,11 +72,10 @@ export default function ApplicationForm({ posting, resumeId, onResumeChange }) {
               <form onSubmit={submit}>
                 <fieldset disabled={isSubmitting}>
                   <div className="form-field"><label htmlFor="resumeId">Başvuru için özgeçmiş</label>
-                    <select id="resumeId" name="resumeId" required value={resumeId}
+                    <select id="resumeId" name="resumeId" required value={resumeId || defaultResume?.id || ''}
                       onInvalid={(event) => event.currentTarget.setCustomValidity('Başvuruda kullanılacak özgeçmişi seçin.')}
                       onChange={(event) => { event.currentTarget.setCustomValidity(''); onResumeChange(event.target.value); }}>
-                      <option value="" disabled>Özgeçmiş seçin</option>
-                      {resumes.map((resume) => <option key={resume.id} value={resume.id}>{resume.originalFileName} · {new Date(resume.uploadedAt).toLocaleString('tr-TR')} · {(resume.fileSizeBytes / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} KB</option>)}
+                      {resumes.map((resume) => <option key={resume.id} value={resume.id}>{resume.originalFileName}{resume.isFavorite ? ' · Favori' : ''} · {new Date(resume.uploadedAt).toLocaleString('tr-TR')} · {(resume.fileSizeBytes / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} KB</option>)}
                     </select><p className="field-hint">Seçtiğiniz PDF bu başvuruya bağlanır.</p></div>
                   <FormField name="coverLetter" label="Ön yazı (isteğe bağlı)" multiline rows={5} maxLength={6000} />
                 </fieldset>

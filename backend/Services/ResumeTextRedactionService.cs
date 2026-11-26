@@ -11,10 +11,15 @@ public sealed class ResumeTextRedactionService
         text = RemoveIdentifiers(text, fullName, email, phone);
         var lines = text.Replace("\r\n", "\n").Split('\n');
         var firstContent = true;
+        var references = false;
         for (var index = 0; index < lines.Length; index++)
         {
             var line = lines[index].Trim();
             if (line.Length == 0) continue;
+            if (IsMatch(line, @"^(?:references|referanslar|referans)\s*:?$")) references = true;
+            else if (references && IsMatch(line, @"^(?:projects|projeler|education(?:\s*&\s*training)?|eğitim|work\s*experience|experience|deneyim|technical\s*skills|skills|beceriler|soft\s*skills|languages|diller|certifications|sertifikalar|summary|özet)\s*:?$"))
+                references = false;
+            if (references) { lines[index] = string.Empty; continue; }
             var personal = IsMatch(line, @"^(?:ad\s*soyad|ad[ıi]?\s*(?:ve\s*)?soyad[ıi]?|full\s*name|name|isim|doğum\s*(?:tarihi|yeri)|date\s*of\s*birth|birth\s*date|nationality|uyruk|medeni\s*durum|marital\s*status|t\.?c\.?\s*(?:kimlik|no)|passport)\s*[:：-]");
             var address = IsMatch(line, @"^(?:açık\s*adres|adres|address|home\s*address)\s*[:：-]") ||
                 IsMatch(line, @"\b(?:mahallesi|sokağı|caddesi|street|avenue)\b|\b(?:mah|sok|cad|apt)\.");

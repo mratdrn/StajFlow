@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import { getResumes, uploadResume, deleteResume } from "../services/resumeService.js";
+import { getResumes, uploadResume, deleteResume, setFavoriteResume } from "../services/resumeService.js";
 import StatePanel from "../components/StatePanel.jsx";
 import LoadingState from "../components/LoadingState.jsx";
 import ResumeAnalysisStatus from "../components/ResumeAnalysisStatus.jsx";
+import Icon from "../components/Icon.jsx";
 
 export default function ResumesPage() {
   const [data, setData] = useState(null);
@@ -14,6 +15,9 @@ export default function ResumesPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [removeError, setRemoveError] = useState('');
+  const [favoritingId, setFavoritingId] = useState(null);
+  const [favoriteError, setFavoriteError] = useState('');
+  const favoriteAbort = useRef(null);
   const removalAbort = useRef(null);
   const fileField = useRef(null);
   const uploadAbort = useRef(null);
@@ -31,10 +35,32 @@ export default function ResumesPage() {
     return () => abort.abort();
   }, [attempt]);
 
-  useEffect(() => () => { uploadAbort.current?.abort(); removalAbort.current?.abort(); }, []);
+  useEffect(() => () => { uploadAbort.current?.abort(); removalAbort.current?.abort(); favoriteAbort.current?.abort(); }, []);
+
+  const isBusy = isLoading || deletingId !== null || favoritingId !== null;
+
+  async function favorite(resume) {
+    if (isBusy || favoriteAbort.current || resume.isFavorite) return;
+    const abort = new AbortController();
+    favoriteAbort.current = abort;
+    setFavoritingId(resume.id);
+    setFavoriteError('');
+    setSuccess('');
+    try {
+      const result = await setFavoriteResume(resume.id, abort.signal);
+      if (abort.signal.aborted) return;
+      setData(result);
+      setSuccess('Favori özgeçmişiniz güncellendi.');
+    } catch {
+      if (!abort.signal.aborted) setFavoriteError('Favori özgeçmiş değiştirilemedi. Listeyi yenileyip tekrar deneyin.');
+    } finally {
+      if (!abort.signal.aborted) { setFavoritingId(null); favoriteAbort.current = null; }
+    }
+  }
 
   async function upload(event) {
     event.preventDefault();
+    if (isBusy) return;
     setUploadError('');
     setSuccess('');
     const file = fileField.current.files[0];
@@ -60,7 +86,7 @@ export default function ResumesPage() {
   }
 
   async function remove(resume) {
-    if (deletingId !== null) return;
+    if (isBusy) return;
     const abort = new AbortController();
     removalAbort.current = abort;
     setDeletingId(resume.id);
@@ -70,6 +96,7 @@ export default function ResumesPage() {
       await deleteResume(resume.id, abort.signal);
       if (abort.signal.aborted) return;
       setData((previous) => ({ ...previous, resumes: previous.resumes.filter((item) => item.id !== resume.id) }));
+      setAttempt((value) => value + 1);
       setSuccess('Özgeçmişiniz kaldırıldı.');
     } catch (failure) {
       if (!abort.signal.aborted) setRemoveError(failure.message);
@@ -85,23 +112,29 @@ export default function ResumesPage() {
       <form className="resume-upload" onSubmit={upload}>
         <h2>PDF özgeçmiş yükle</h2>
         <div className="form-field"><label htmlFor="resume-file">PDF dosyası</label>
-          <input ref={fileField} id="resume-file" type="file" accept=".pdf,application/pdf" disabled={isLoading || deletingId !== null} aria-describedby="file-size-limit" />
+          <input ref={fileField} id="resume-file" type="file" accept=".pdf,application/pdf" disabled={isBusy} aria-describedby="file-size-limit" />
           <p className="field-hint" id="file-size-limit">En fazla {data.maxFileSizeBytes / 1024 / 1024} MB. Her yükleme ayrı bir özgeçmiş olarak saklanır.</p></div>
         {uploadError && <p className="form-alert" role="alert">{uploadError}</p>}
-        <button className="button primary-action" disabled={isLoading || deletingId !== null} type="submit">{isLoading ? 'Yükleniyor…' : 'Özgeçmiş yükle'}</button>
+        <button className="button primary-action" disabled={isBusy} type="submit">{isLoading ? 'Yükleniyor…' : 'Özgeçmiş yükle'}</button>
       </form>
       <section aria-labelledby="resume-list"><h2 id="resume-list">Yüklediğiniz özgeçmişler</h2>
         {removeError && <p className="form-alert" role="alert">{removeError}</p>}
+        {favoriteError && <p className="form-alert" role="alert">{favoriteError}</p>}
         {data.resumes.length === 0 ? <StatePanel title="Henüz özgeçmişiniz yok">İlk PDF özgeçmişinizi yukarıdaki alandan yükleyebilirsiniz.</StatePanel> :
           <div className="resume-list">{data.resumes.map((resume) => <article className="resume-card" key={resume.id}>
             <div><h3>{resume.originalFileName}</h3><p className="muted">{(resume.fileSizeBytes / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} KB · {new Date(resume.uploadedAt).toLocaleString('tr-TR')}</p>
-              <ResumeAnalysisStatus resumeId={resume.id} disabled={deletingId !== null} /></div>
+              <ResumeAnalysisStatus resumeId={resume.id} disabled={isBusy} /></div>
             <div className="resume-card-actions">
+              <button className={`resume-favorite-button${resume.isFavorite ? ' is-favorite' : ''}`} type="button" disabled={isBusy}
+                aria-pressed={resume.isFavorite} aria-busy={favoritingId === resume.id}
+                aria-label={`${resume.isFavorite ? 'Favori özgeçmiş' : 'Favori yap'}: ${resume.originalFileName}`}
+                title={favoritingId === resume.id ? 'Favori güncelleniyor…' : resume.isFavorite ? 'Favori özgeçmiş' : 'Favori yap'}
+                onClick={() => favorite(resume)}><Icon name="heart" /></button>
               <Link className={`button${deletingId === resume.id ? ' disabled-link' : ''}`}
                 aria-disabled={deletingId === resume.id} aria-label={`Görüntüle: ${resume.originalFileName}`}
                 onClick={(event) => { if (deletingId === resume.id) event.preventDefault(); }}
                 to={`/ogrenci/ozgecmisler/${resume.id}`}>Görüntüle</Link>
-              <button className="button danger-button" type="button" disabled={isLoading || deletingId !== null}
+              <button className="button danger-button" type="button" disabled={isBusy}
                 aria-label={`Kaldır: ${resume.originalFileName}`} onClick={() => remove(resume)}>
                 {deletingId === resume.id ? 'Kaldırılıyor…' : 'Kaldır'}</button>
             </div>

@@ -7,7 +7,7 @@ using StajFlow.Api.Entities;
 
 namespace StajFlow.Api.Services;
 
-public sealed class AnalysisWorker(IServiceScopeFactory scopeFactory, IOptions<GeminiOptions> options,
+public sealed class AnalysisWorker(IServiceScopeFactory scopeFactory, IOptions<GroqOptions> options,
     TimeProvider clock, ILogger<AnalysisWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

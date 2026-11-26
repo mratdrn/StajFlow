@@ -14,8 +14,8 @@ public abstract class PostingContentRequest : IValidatableObject
     [JsonPropertyName("shortDescription")]
     public string? ShortDescription { get; set; }
 
-    [Required(ErrorMessage = "İş tanımı zorunludur.")]
-    [StringLength(10000, ErrorMessage = "İş tanımı en fazla 10000 karakter olabilir.")]
+    [Required(ErrorMessage = "İlan açıklaması zorunludur.")]
+    [StringLength(10000, ErrorMessage = "İlan açıklaması en fazla 10000 karakter olabilir.")]
     [JsonPropertyName("description")]
     public string Description { get; set; } = string.Empty;
 

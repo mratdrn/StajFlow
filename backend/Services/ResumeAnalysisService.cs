@@ -1,6 +1,5 @@
 using System.Data;
 using System.Security.Cryptography;
-using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -32,10 +31,16 @@ public sealed class ResumeAnalysisService(ApplicationDbContext context, IPdfText
             return new(null, true);
         var existing = await context.ResumeAnalyses.Where(record => record.ResumeId == resumeId)
             .OrderByDescending(record => record.Version).ToListAsync(cancellationToken);
-        var reusable = existing.FirstOrDefault(record => record.Status == AnalysisStatus.Completed && record.SchemaVersion == "1") ??
+        var reusable = existing.FirstOrDefault(record => record.Status == AnalysisStatus.Completed &&
+            record.SchemaVersion == ResumeAnalysisContract.SchemaVersion) ??
             existing.FirstOrDefault(record => record.Status is AnalysisStatus.Pending or AnalysisStatus.Processing);
         if (reusable is not null) return new(ToDto(reusable));
-        var analysis = new ResumeAnalysis { ResumeId = resumeId, Version = existing.Count == 0 ? 1 : existing.Max(record => record.Version) + 1 };
+        var analysis = new ResumeAnalysis
+        {
+            ResumeId = resumeId,
+            Version = existing.Count == 0 ? 1 : existing.Max(record => record.Version) + 1,
+            SchemaVersion = ResumeAnalysisContract.SchemaVersion
+        };
         context.ResumeAnalyses.Add(analysis);
         try
         {
@@ -66,6 +71,12 @@ public sealed class ResumeAnalysisService(ApplicationDbContext context, IPdfText
         analysis.Status = AnalysisStatus.Processing;
         var now = clock.GetUtcNow();
         analysis.StartedAt = now < analysis.CreatedAt ? analysis.CreatedAt : now;
+        if (analysis.SchemaVersion != ResumeAnalysisContract.SchemaVersion)
+        {
+            try { await FinishAsync(analysis, null, AnalysisErrorCode.Cancelled, cancellationToken); }
+            catch (DbUpdateConcurrencyException) { }
+            return true;
+        }
         try { await context.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateConcurrencyException) { return true; }
         try
@@ -106,9 +117,11 @@ public sealed class ResumeAnalysisService(ApplicationDbContext context, IPdfText
                 await FinishAsync(analysis, null, AnalysisErrorCode.UnreadableText, cancellationToken);
                 return true;
             }
-            var request = new LlmJsonRequest(ResumeAnalysisContract.Instruction, text, ResumeAnalysisContract.CreateSchema(),
-                json => ResumeAnalysisContract.Validate(json, text, value => redaction.RemoveIdentifiers(value, fullName, student.Email, student.PhoneNumber),
-                    reason => logger.LogWarning("CV yanıtı doğrulanamadı. AnalysisId: {AnalysisId}, Reason: {Reason}", analysis.Id, reason)));
+            string? correction = null;
+            var request = new LlmJsonRequest(ResumeAnalysisContract.Instruction, ResumeAnalysisContract.CreateInput(text), ResumeAnalysisContract.CreateSchema(),
+                json => ResumeAnalysisContract.Validate(json, value => redaction.RemoveIdentifiers(value, fullName, student.Email, student.PhoneNumber),
+                    reason => logger.LogWarning("CV yanıtı doğrulanamadı. AnalysisId: {AnalysisId}, Reason: {Reason}", analysis.Id, reason),
+                    feedback => correction = redaction.RemoveIdentifiers(feedback, fullName, student.Email, student.PhoneNumber)), correction: () => correction);
             var result = await llm.GenerateJsonAsync(request, cancellationToken);
             await FinishAsync(analysis, result.Json, result.ErrorCode, cancellationToken);
         }
@@ -147,14 +160,14 @@ public sealed class ResumeAnalysisService(ApplicationDbContext context, IPdfText
 
     private static ResumeAnalysisDto ToDto(ResumeAnalysis analysis)
     {
-        ResumeAnalysisData? data = null;
+        MatchingProfile? data = null;
         var code = analysis.ErrorCode;
-        if (analysis.Status == AnalysisStatus.Completed && analysis.DataJson is not null)
+        if (analysis.SchemaVersion == ResumeAnalysisContract.SchemaVersion && analysis.Status == AnalysisStatus.Completed && analysis.DataJson is not null)
         {
-            try { data = JsonSerializer.Deserialize<ResumeAnalysisData>(analysis.DataJson); }
-            catch (JsonException) { code = AnalysisErrorCode.InvalidResponse; }
+            data = ResumeAnalysisContract.Read(analysis.DataJson);
+            if (data is null) code = AnalysisErrorCode.InvalidResponse;
         }
         return new(analysis.Id, analysis.ResumeId, analysis.Version, analysis.Status.ToString(), analysis.CreatedAt,
-            analysis.StartedAt, analysis.CompletedAt, code?.ToString(), AnalysisErrorMessages.Get(code), data);
+            analysis.StartedAt, analysis.CompletedAt, code?.ToString(), AnalysisErrorMessages.Get(code), data, analysis.SchemaVersion != ResumeAnalysisContract.SchemaVersion);
     }
 }

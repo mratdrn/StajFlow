@@ -12,4 +12,5 @@ public record ResumeAnalysisDto(
     [property: JsonPropertyName("completedAt")] DateTimeOffset? CompletedAt,
     [property: JsonPropertyName("errorCode")] string? ErrorCode,
     [property: JsonPropertyName("message")] string? Message,
-    [property: JsonPropertyName("data")] ResumeAnalysisData? Data);
+    [property: JsonPropertyName("data")] MatchingProfile? Data,
+    bool RequiresReanalysis = false);

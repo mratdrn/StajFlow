@@ -5,3 +5,6 @@ export const getMyPostings = (signal, archived) => apiRequest(`${basePath}${arch
 export const getCompanyPosting = (id, signal) => apiRequest(`${basePath}/${encodeURIComponent(id)}`, { signal });
 export const createCompanyPosting = (body) => apiRequest(basePath, { method: 'POST', body: body });
 export const updateCompanyPosting = (id, body) => apiRequest(`${basePath}/${encodeURIComponent(id)}`, { method: 'PUT', body: body });
+
+export const getPostingAnalysis = (id, signal) => apiRequest(`${basePath}/${encodeURIComponent(id)}/analysis`, { signal });
+export const requestPostingAnalysis = (id, signal) => apiRequest(`${basePath}/${encodeURIComponent(id)}/analysis`, { method: 'POST', signal });

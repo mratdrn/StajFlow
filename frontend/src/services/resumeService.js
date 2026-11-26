@@ -20,6 +20,10 @@ export function deleteResume(id, signal) {
   return apiRequest(`${resumePath}/${encodeURIComponent(id)}`, { method: 'DELETE', signal });
 }
 
+export function setFavoriteResume(id, signal) {
+  return apiRequest(`${resumePath}/${encodeURIComponent(id)}/favorite`, { method: 'PUT', signal });
+}
+
 export function getResumeAnalysis(id, signal) {
   return apiRequest(`${resumePath}/${encodeURIComponent(id)}/analysis`, { signal });
 }

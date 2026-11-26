@@ -23,14 +23,7 @@ public class InternshipPostingService(ApplicationDbContext context) : IInternshi
             posting.StartDate,
             posting.EndDate,
             posting.CreatedAt,
-            posting.Requirements
-                .OrderBy(requirement => requirement.Type)
-                .ThenBy(requirement => requirement.Id)
-                .Select(requirement => new InternshipRequirementDto(
-                    requirement.Id,
-                    requirement.Description,
-                    requirement.Type.ToString()))
-                .ToList(), posting.ShortDescription,
+            new List<InternshipRequirementDto>(), posting.ShortDescription,
             posting.CompanyProfile.LogoVersion.HasValue ? "/api/companies/" + posting.CompanyProfileId + "/logo?v=" + posting.CompanyProfile.LogoVersion.Value.ToString().ToLower() : null);
 
     public async Task<IReadOnlyList<InternshipPostingListDto>> ListAsync(

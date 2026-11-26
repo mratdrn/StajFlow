@@ -72,6 +72,9 @@ public class CompanyPostingsController(ICompanyPostingService service, PostingAn
         PostingManagementError.InvalidDeadline => ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
             { ["applicationDeadline"] = ["Son başvuru için bugün veya sonraki bir tarih ve henüz geçmemiş bir saat seçin."] })
             { Title = "Son başvuru tarihini kontrol edin." }),
+        PostingManagementError.InvalidDescription => ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            { ["description"] = ["İlan açıklaması niteliklerle birlikte en fazla 10000 karakter olabilir."] })
+            { Title = "İlan açıklamasını kontrol edin." }),
         _ => ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
             { ["requirements"] = ["Nitelik listesinde bu ilana ait olmayan bir kayıt var."] }) { Title = "Bilgileri kontrol edin." })
     };

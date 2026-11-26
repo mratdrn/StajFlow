@@ -26,7 +26,8 @@ builder.Services.AddScoped<ICompanyPostingService, CompanyPostingService>();
 builder.Services.AddScoped<IResumeService, ResumeService>();
 builder.Services.AddScoped<IPdfTextExtractionService, PdfTextExtractionService>();
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddSingleton<GeminiApiKeyProvider>();
+builder.Services.AddSingleton<GroqApiKeyProvider>();
+builder.Services.AddSingleton<GroqTokenBudget>();
 builder.Services.AddSingleton<ILlmQuotaService, LlmQuotaService>();
 builder.Services.AddSingleton<ResumeTextRedactionService>();
 builder.Services.AddScoped<ResumeAnalysisService>();
@@ -35,19 +36,21 @@ builder.Services.AddScoped<PostingAnalysisService>();
 builder.Services.AddSingleton<CompatibilityScorer>();
 builder.Services.AddScoped<CompatibilityService>();
 builder.Services.AddHostedService<AnalysisWorker>();
-builder.Services.AddOptions<GeminiOptions>().BindConfiguration(GeminiOptions.SectionName)
+builder.Services.AddOptions<GroqOptions>().BindConfiguration(GroqOptions.SectionName)
     .Validate(settings => Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out var uri) && uri.Scheme == "https" &&
         string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Query) && string.IsNullOrEmpty(uri.Fragment) &&
-        settings.BaseUrl.EndsWith('/') && uri.Host.Equals("generativelanguage.googleapis.com", StringComparison.OrdinalIgnoreCase),
-        "Gemini adresi geçerli bir Google HTTPS API adresi olmalıdır.")
+        settings.BaseUrl.EndsWith('/') && uri.Host.Equals("api.groq.com", StringComparison.OrdinalIgnoreCase),
+        "Groq adresi geçerli bir Groq HTTPS API adresi olmalıdır.")
     .Validate(settings => !string.IsNullOrWhiteSpace(settings.Model) && settings.Model.Length <= 128 &&
-        settings.Model.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '.'), "Gemini model kimliği geçersiz.")
+        settings.Model.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '.' or '/' or '_'), "Groq model kimliği geçersiz.")
     .Validate(settings => settings.DailyRequestLimit > 0 && settings.RequestsPerMinute > 0 &&
         settings.MaxInputCharacters > 0 && settings.MaxOutputTokens > 0 && settings.MaxResponseBytes > 0 &&
-        settings.RequestTimeoutSeconds > 0 && settings.RetryBaseDelaySeconds >= 0 && settings.MaxRetryDelaySeconds > 0,
-        "Gemini kullanım sınırları ve zaman aşımı ayarları geçerli olmalıdır.")
+        settings.RequestTimeoutSeconds > 0 && settings.RetryBaseDelaySeconds >= 0 && settings.MaxRetryDelaySeconds > 0 &&
+        settings.TokensPerMinute > settings.MaxOutputTokens && settings.DailyTokenLimit >= settings.TokensPerMinute &&
+        settings.TokenSafetyMargin >= 0 && settings.ReasoningEffort is "low" or "medium" or "high",
+        "Groq kullanım sınırları ve zaman aşımı ayarları geçerli olmalıdır.")
     .ValidateOnStart();
-builder.Services.AddHttpClient<ILlmService, GeminiService>(client => client.Timeout = Timeout.InfiniteTimeSpan)
+builder.Services.AddHttpClient<ILlmService, GroqService>(client => client.Timeout = Timeout.InfiniteTimeSpan)
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
     {
         AllowAutoRedirect = false,

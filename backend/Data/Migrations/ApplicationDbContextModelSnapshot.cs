@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -587,6 +587,12 @@ namespace StajFlow.Api.Data.Migrations
 
             modelBuilder.Entity("StajFlow.Api.Entities.LlmDailyUsage", b =>
                 {
+                    b.Property<string>("Provider")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasDefaultValue("Gemini");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -602,6 +608,9 @@ namespace StajFlow.Api.Data.Migrations
                     b.Property<int>("RequestCount")
                         .HasColumnType("int");
 
+                    b.Property<long>("ReservedTokens")
+                        .HasColumnType("bigint");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -611,14 +620,17 @@ namespace StajFlow.Api.Data.Migrations
                     b.Property<int>("WindowRequestCount")
                         .HasColumnType("int");
 
+                    b.Property<long>("WindowReservedTokens")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTimeOffset>("WindowStartedAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.HasKey("Date");
+                    b.HasKey("Provider", "Date");
 
                     b.ToTable("LlmDailyUsage", null, t =>
                         {
-                            t.HasCheckConstraint("CK_LlmDailyUsage_Counts", "[RequestCount] >= 0 AND [WindowRequestCount] >= 0 AND [InputTokens] >= 0 AND [OutputTokens] >= 0");
+                            t.HasCheckConstraint("CK_LlmDailyUsage_Counts", "[RequestCount] >= 0 AND [WindowRequestCount] >= 0 AND [InputTokens] >= 0 AND [OutputTokens] >= 0 AND [ReservedTokens] >= 0 AND [WindowReservedTokens] >= 0");
                         });
                 });
 
@@ -724,6 +736,11 @@ namespace StajFlow.Api.Data.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("FileSizeBytes");
 
+                    b.Property<bool>("IsFavorite")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("OriginalFileName")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -752,6 +769,10 @@ namespace StajFlow.Api.Data.Migrations
                         .IsUnique();
 
                     b.HasIndex("StudentProfileId");
+
+                    b.HasIndex(new[] { "StudentProfileId" }, "IX_Resumes_StudentProfileId_Favorite")
+                        .IsUnique()
+                        .HasFilter("[IsFavorite] = 1");
 
                     b.ToTable("Resumes", null, t =>
                         {

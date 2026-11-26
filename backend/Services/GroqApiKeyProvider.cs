@@ -1,11 +1,11 @@
 namespace StajFlow.Api.Services;
 
-public sealed class GeminiApiKeyProvider(IHostEnvironment environment)
+public sealed class GroqApiKeyProvider(IHostEnvironment environment)
 {
     public string? GetKey()
     {
-        var configured = Environment.GetEnvironmentVariable("Gemini__ApiKey");
-        if (string.IsNullOrWhiteSpace(configured)) configured = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+        var configured = Environment.GetEnvironmentVariable("Groq__ApiKey");
+        if (string.IsNullOrWhiteSpace(configured)) configured = Environment.GetEnvironmentVariable("GROQ_API_KEY");
         if (!string.IsNullOrWhiteSpace(configured))
         {
             var value = configured.Trim();
@@ -20,7 +20,7 @@ public sealed class GeminiApiKeyProvider(IHostEnvironment environment)
                 var entry = line.Trim();
                 if (entry.StartsWith("export ", StringComparison.Ordinal)) entry = entry[7..].TrimStart();
                 var separator = entry.IndexOf('=');
-                if (separator < 0 || entry[..separator].Trim() != "GEMINI_API_KEY") continue;
+                if (separator < 0 || entry[..separator].Trim() != "GROQ_API_KEY") continue;
                 var value = entry[(separator + 1)..].Trim();
                 if (value.Length > 0 && value[0] is '\'' or '"')
                 {

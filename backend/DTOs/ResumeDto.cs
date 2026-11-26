@@ -6,7 +6,8 @@ public record ResumeDto(
     [property: JsonPropertyName("id")] int Id,
     [property: JsonPropertyName("originalFileName")] string OriginalFileName,
     [property: JsonPropertyName("fileSizeBytes")] long FileSizeBytes,
-    [property: JsonPropertyName("uploadedAt")] DateTimeOffset UploadedAt);
+    [property: JsonPropertyName("uploadedAt")] DateTimeOffset UploadedAt,
+    [property: JsonPropertyName("isFavorite")] bool IsFavorite = false);
 
 public record ResumeListDto(
     [property: JsonPropertyName("maxFileSizeBytes")] long MaxFileSizeBytes,
